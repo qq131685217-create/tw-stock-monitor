@@ -16,7 +16,6 @@
             font-family: 'JetBrains Mono', monospace;
             font-variant-numeric: tabular-nums;
         }
-        /* 自訂細緻捲軸 */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -31,7 +30,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
-        /* 權重滑桿美化 */
         input[type="range"].quant-slider {
             -webkit-appearance: none;
             appearance: none;
@@ -69,7 +67,6 @@
     <!-- 頂部全域導覽列 (Top Bar) -->
     <header class="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 shrink-0 z-20 shadow-xs">
         <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
-            <!-- 左側系統標題與全市場覆蓋標籤 -->
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-sm shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
@@ -88,23 +85,22 @@
                     <div class="flex items-center gap-2 mt-0.5 text-xs whitespace-nowrap">
                         <span id="calendarStatusBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-semibold whitespace-nowrap shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0"></span>
-                            <span id="calendarStatusText" class="whitespace-nowrap">支援 GitHub 每日盤後自動同步（tw_market_data.json）</span>
+                            <span id="calendarStatusText" class="whitespace-nowrap">自動追蹤 GitHub 雲端即時與盤後報價（tw_market_data.json）</span>
                         </span>
                         <span id="storageStatusBadge" class="hidden xl:inline-block text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">
-                            資料來源：✓ 盤後真實收盤與三大法人校準
+                            資料來源：等待同步 GitHub 雲端資料庫
                         </span>
                     </div>
                 </div>
             </div>
 
-            <!-- 右側一鍵連網即時更新主按鈕與輔助操作 -->
             <div class="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <button type="button" id="btnLiveSync" onclick="triggerOneClickLiveUpdate()"
                     class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-bold shadow-sm hover:shadow transition-all cursor-pointer whitespace-nowrap shrink-0">
                     <svg id="iconLiveSync" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span id="btnLiveSyncLabel" class="whitespace-nowrap">🔄 同步最新盤後／報價</span>
+                    <span id="btnLiveSyncLabel" class="whitespace-nowrap">🔄 同步最新即時／盤後報價</span>
                 </button>
 
                 <button type="button" onclick="openManualImportModal()"
@@ -115,20 +111,19 @@
 
                 <button type="button" onclick="resetToDefaultCalibratedData()"
                     class="hidden sm:inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                    title="清除本機自訂修改並還原至最近交易日官方基準">
-                    <span>還原基準</span>
+                    title="清除本機自訂修改並重新載入雲端最新數據">
+                    <span>清除快取重載</span>
                 </button>
             </div>
         </div>
 
-        <!-- 連網同步進度條（預設隱藏） -->
         <div id="liveSyncProgressBar" class="hidden max-w-[1600px] mx-auto mt-2.5 pt-2 border-t border-slate-100">
             <div class="flex items-center justify-between text-xs text-blue-700 font-semibold mb-1">
-                <span id="liveSyncProgressText">正在並行查詢臺灣證券交易所 (TWSE) 與櫃買中心 (TPEx) 最新盤後行情...</span>
-                <span id="liveSyncProgressPct" class="font-mono-num">處理中...</span>
+                <span id="liveSyncProgressText">正在讀取 GitHub 雲端即時與盤後資料庫 (tw_market_data.json)...</span>
+                <span id="liveSyncProgressPct" class="font-mono-num">同步中...</span>
             </div>
             <div class="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                <div id="liveSyncProgressFill" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 45%"></div>
+                <div id="liveSyncProgressFill" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 65%"></div>
             </div>
         </div>
     </header>
@@ -136,7 +131,7 @@
     <!-- 主工作區：左側控制面板 + 右側主分析儀表板 -->
     <div class="flex-1 flex flex-col lg:flex-row max-w-[1600px] w-full mx-auto lg:overflow-hidden">
 
-        <!-- 左側控制面板（固定寬度 330px，獨立滾動） -->
+        <!-- 左側控制面板 -->
         <aside class="w-full lg:w-[330px] bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-4 lg:overflow-y-auto shrink-0 space-y-5">
 
             <!-- 1. 投資策略模型預設 -->
@@ -240,15 +235,15 @@
                 <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
                     <button type="button" id="mkt-ALL" onclick="setMarketFilter('ALL')"
                         class="mkt-btn py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white text-slate-900 shadow-2xs">
-                        全部 (1867)
+                        全部
                     </button>
                     <button type="button" id="mkt-TWSE" onclick="setMarketFilter('TWSE')"
                         class="mkt-btn py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-slate-600 hover:text-slate-900">
-                        上市 (1032)
+                        上市 TWSE
                     </button>
                     <button type="button" id="mkt-TPEx" onclick="setMarketFilter('TPEx')"
                         class="mkt-btn py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-slate-600 hover:text-slate-900">
-                        上櫃 (835)
+                        上櫃 TPEx
                     </button>
                 </div>
 
@@ -268,7 +263,7 @@
             </div>
         </aside>
 
-        <!-- 右側主分析儀表板（獨立滾動） -->
+        <!-- 右側主分析儀表板 -->
         <main class="flex-1 min-w-0 lg:h-full lg:overflow-y-auto p-4 lg:p-6 space-y-6">
 
             <!-- 頂部 4 張關鍵市場指標卡 -->
@@ -277,7 +272,7 @@
                     <div class="text-xs font-semibold text-slate-500">全市場監測總家數</div>
                     <div class="mt-1.5 flex items-baseline gap-2">
                         <span id="kpiTotalUniverse" class="text-2xl font-extrabold font-mono-num text-slate-900">1,867</span>
-                        <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">上市1032 / 上櫃835</span>
+                        <span id="kpiMarketSplit" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">上市 / 上櫃</span>
                     </div>
                     <div class="mt-1 text-[11px] text-slate-400">完整涵蓋台灣證交所與櫃買中心普通股</div>
                 </div>
@@ -301,11 +296,11 @@
                 </div>
 
                 <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs">
-                    <div class="text-xs font-semibold text-slate-500">最後有效交易日基準</div>
+                    <div class="text-xs font-semibold text-slate-500">報價同步狀態與基準時間</div>
                     <div class="mt-1.5 flex items-baseline gap-2">
-                        <span id="kpiSyncTimestamp" class="text-lg sm:text-xl font-extrabold font-mono-num text-slate-900">2026/11/13 (五)</span>
+                        <span id="kpiSyncTimestamp" class="text-base sm:text-lg font-extrabold font-mono-num text-slate-900">等待同步即時報價</span>
                     </div>
-                    <div id="kpiSyncSubtext" class="mt-1 text-[11px] text-emerald-600 font-semibold truncate">✓ GitHub 每日盤後自動同步就緒</div>
+                    <div id="kpiSyncSubtext" class="mt-1 text-[11px] text-blue-600 font-semibold truncate">讀取 tw_market_data.json 中...</div>
                 </div>
             </section>
 
@@ -322,7 +317,7 @@
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="syncLiveIndex3DayIntraday(false)"
                             class="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold cursor-pointer whitespace-nowrap">
-                            🔄 連網同步近3日分時
+                            🔄 刷新近3日走勢
                         </button>
                         <button type="button" onclick="openManualIndexModal()"
                             class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer whitespace-nowrap">
@@ -331,7 +326,6 @@
                     </div>
                 </div>
 
-                <!-- 十字準星數據列 -->
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 my-3 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs">
                     <div>
                         <span class="text-slate-400 block text-[10px]">時間節點</span>
@@ -346,7 +340,7 @@
                         <span id="idxCrossPrice" class="font-mono-num font-extrabold text-slate-900">--</span>
                     </div>
                     <div>
-                        <span class="text-slate-400 block text-[10px]">較前收漲跌</span>
+                        <span class="text-slate-400 block text-[10px]">較起始漲跌</span>
                         <span id="idxCrossDiff" class="font-mono-num font-bold text-slate-700">--</span>
                     </div>
                     <div class="col-span-2 sm:col-span-1">
@@ -392,8 +386,8 @@
             <section class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
                     <div>
-                        <h2 class="text-base font-extrabold text-slate-900">📊 上市／上櫃三大法人合計單日買賣超前十大（2026/11/13 盤後）</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">鎖定最後有效交易日外資＋投信＋自營商合計買超前十強與賣超前十大（點擊個股可檢視診斷）</p>
+                        <h2 class="text-base font-extrabold text-slate-900">📊 上市／上櫃三大法人合計單日買賣超前十大</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">鎖定最近有效交易日外資＋投信＋自營商合計買超前十強與賣超前十大（點擊個股可檢視診斷）</p>
                     </div>
                     <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
                         <button type="button" onclick="setInstTop10Tab('ALL')" id="instTab-ALL" class="inst-tab-btn px-2.5 py-1 rounded-lg bg-white text-slate-900 shadow-2xs cursor-pointer">全市場總覽</button>
@@ -403,7 +397,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <!-- 買超前十強 -->
                     <div class="rounded-xl border border-rose-200/80 bg-rose-50/25 overflow-hidden">
                         <div class="px-3.5 py-2 bg-rose-50 border-b border-rose-200/80 flex items-center justify-between">
                             <span class="text-xs font-extrabold text-rose-800">🔥 三大法人單日買超前十強（張）</span>
@@ -412,7 +405,6 @@
                         <div id="instTop10BuyList" class="divide-y divide-rose-100/80"></div>
                     </div>
 
-                    <!-- 賣超前十大 -->
                     <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/25 overflow-hidden">
                         <div class="px-3.5 py-2 bg-emerald-50 border-b border-emerald-200/80 flex items-center justify-between">
                             <span class="text-xs font-extrabold text-emerald-800">❄️ 三大法人單日賣超前十大（張）</span>
@@ -454,7 +446,7 @@
                             <tr class="bg-slate-50/90 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                                 <th class="py-3 px-3.5">代號 / 名稱</th>
                                 <th class="py-3 px-3">市場 / 產業</th>
-                                <th class="py-3 px-3 text-right">收盤價</th>
+                                <th class="py-3 px-3 text-right">即時/收盤價</th>
                                 <th class="py-3 px-3 text-right">漲跌幅</th>
                                 <th class="py-3 px-3 text-right">法人單日(張)</th>
                                 <th class="py-3 px-3 text-right">PE / 殖利率</th>
@@ -467,7 +459,6 @@
                     </table>
                 </div>
 
-                <!-- 分頁控制列 -->
                 <div class="px-4 py-3 bg-slate-50/70 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span id="paginationInfoText" class="text-slate-500 font-semibold">顯示第 1 - 25 筆，共 1,867 筆</span>
                     <div id="paginationButtons" class="flex items-center gap-1"></div>
@@ -479,7 +470,6 @@
     <!-- 右側滑出式個股 K 線與技術分析診斷抽屜 -->
     <div id="stockDrawerBackdrop" onclick="closeStockDrawer()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-40 hidden transition-opacity"></div>
     <aside id="stockDetailDrawer" class="fixed top-0 right-0 h-full w-full max-w-[660px] bg-white shadow-2xl border-l border-slate-200 z-50 transform translate-x-full transition-transform duration-250 flex flex-col">
-        <!-- 抽屜頂部標題列 -->
         <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
             <div>
                 <div class="flex items-center gap-2">
@@ -489,17 +479,15 @@
                     <span id="drawerSectorText" class="text-xs font-semibold text-slate-500">半導體業</span>
                 </div>
                 <div class="flex items-center gap-3 mt-1 text-xs">
-                    <span class="text-slate-500">最新參考價：<strong id="drawerPriceText" class="font-mono-num text-sm text-slate-900">1,065.0</strong></span>
-                    <span id="drawerPctBadge" class="font-mono-num font-bold text-rose-600">+1.91%</span>
-                    <span id="drawerScoreBadge" class="px-2 py-0.5 rounded-full font-mono-num font-extrabold bg-rose-600 text-white text-[11px]">92.4 分・強力買進</span>
+                    <span class="text-slate-500">最新成交/參考價：<strong id="drawerPriceText" class="font-mono-num text-sm text-slate-900">--</strong></span>
+                    <span id="drawerPctBadge" class="font-mono-num font-bold text-rose-600">--</span>
+                    <span id="drawerScoreBadge" class="px-2 py-0.5 rounded-full font-mono-num font-extrabold bg-rose-600 text-white text-[11px]">--</span>
                 </div>
             </div>
             <button type="button" onclick="closeStockDrawer()" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 font-bold cursor-pointer">✕</button>
         </div>
 
-        <!-- 抽屜可滾動內容區 -->
         <div class="flex-1 overflow-y-auto p-5 space-y-5">
-            <!-- 50 個交易日真實歷史 K 線圖與技術分析副圖 -->
             <div class="bg-slate-50/90 rounded-2xl border border-slate-200 p-3.5">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                     <div class="flex items-center gap-1.5">
@@ -507,7 +495,7 @@
                         <span id="drawerKlineSourceTag" class="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">等待載入真實日線</span>
                     </div>
                     <div class="flex items-center gap-1 flex-wrap">
-                        <button type="button" onclick="toggleKlineOverlay('bb')" id="btnToggleBB" class="px-2 py-1 rounded text-[11px] font-bold bg-blue-600 text-white cursor-pointer">布林通道</button>
+                        <button type="button" onclick="toggleKlineOverlay('bb')" id="btnToggleBB" class="px-2 py-1 rounded text-[11px] font-bold bg-blue-600 text-white cursor-pointer">布林通道(20,2)</button>
                         <button type="button" onclick="toggleKlineOverlay('sr')" id="btnToggleSR" class="px-2 py-1 rounded text-[11px] font-bold bg-blue-600 text-white cursor-pointer">支撐/壓力</button>
                         <select id="klineSubIndicatorSelect" onchange="renderCurrentDrawerKline()" class="px-2 py-1 rounded text-[11px] font-bold bg-white border border-slate-300 text-slate-700">
                             <option value="VOL">副圖：成交量 VOL</option>
@@ -519,24 +507,21 @@
                     </div>
                 </div>
 
-                <!-- 固定 7 欄防跑版數據列 -->
                 <div class="grid grid-cols-3 sm:grid-cols-7 gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 mb-2 text-[11px]">
                     <div><span class="text-slate-400 block text-[9px]">日期</span><span id="ohlcDate" class="font-mono-num font-bold text-slate-800">--</span></div>
                     <div><span class="text-slate-400 block text-[9px]">開盤</span><span id="ohlcOpen" class="font-mono-num font-bold text-slate-800">--</span></div>
                     <div><span class="text-slate-400 block text-[9px]">最高</span><span id="ohlcHigh" class="font-mono-num font-bold text-rose-600">--</span></div>
                     <div><span class="text-slate-400 block text-[9px]">最低</span><span id="ohlcLow" class="font-mono-num font-bold text-emerald-600">--</span></div>
-                    <div><span class="text-slate-400 block text-[9px]">收盤</span><span id="ohlcClose" class="font-mono-num font-bold text-slate-900">--</span></div>
+                    <div><span class="text-slate-400 block text-[9px]">收盤/現價</span><span id="ohlcClose" class="font-mono-num font-bold text-slate-900">--</span></div>
                     <div><span class="text-slate-400 block text-[9px]">成交張數</span><span id="ohlcVol" class="font-mono-num font-bold text-slate-700">--</span></div>
                     <div><span class="text-slate-400 block text-[9px]">RSI / KD</span><span id="ohlcInd" class="font-mono-num font-bold text-indigo-700">--</span></div>
                 </div>
 
-                <!-- K 線畫布區 -->
                 <div class="relative w-full h-[270px] bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <canvas id="drawerKlineCanvas" class="w-full h-full block cursor-crosshair"></canvas>
-                    <!-- 無真實 K 線時的誠實提示層 -->
                     <div id="drawerKlineEmptyState" class="hidden absolute inset-0 bg-slate-50/95 flex flex-col items-center justify-center p-5 text-center">
                         <div class="text-sm font-extrabold text-slate-800 mb-1">尚未取得該股真實歷史 K 線數據（絕不畫假線）</div>
-                        <p class="text-xs text-slate-500 max-w-md mb-3">當前預覽環境受限或尚無歷史日線快取。部署至 GitHub Pages 後每日盤後會自動累積真實日線，您也可以立即貼上真實 OHLC 數據。</p>
+                        <p class="text-xs text-slate-500 max-w-md mb-3">部署至 GitHub Pages 後每次排程都會自動累積真實日線，您也可以立即貼上真實 OHLC 數據。</p>
                         <div class="flex items-center gap-2">
                             <button type="button" onclick="retryFetchDrawerKline()" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer">🔄 重新連網抓取</button>
                             <button type="button" onclick="openManualKlineModal()" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-bold cursor-pointer">📋 手動貼上真實日線 OHLC</button>
@@ -545,7 +530,6 @@
                 </div>
             </div>
 
-            <!-- 技術分析指標與趨勢結構診斷欄 -->
             <div class="bg-white rounded-2xl border border-slate-200 p-4">
                 <div class="flex items-center justify-between mb-2.5">
                     <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">📐 技術分析指標與趨勢結構診斷</h4>
@@ -554,7 +538,6 @@
                 <div id="drawerTechGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs"></div>
             </div>
 
-            <!-- 操作建議進出點位與風報比 -->
             <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4">
                 <div class="flex items-center justify-between mb-3">
                     <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-300">🎯 量化動態進出點位與風報比控管</h4>
@@ -576,7 +559,6 @@
                 </div>
             </div>
 
-            <!-- 四大維度得分與診斷理由 -->
             <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
                 <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">🔍 四大維度量化評分拆解與風控診斷</h4>
                 <div id="drawerSubScoresGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
@@ -592,7 +574,7 @@
                 <h3 class="text-base font-extrabold text-slate-900">📋 手動貼上最新報價／法人買賣超</h3>
                 <button type="button" onclick="closeManualImportModal()" class="text-slate-400 hover:text-slate-700 font-bold cursor-pointer">✕</button>
             </div>
-            <p class="text-xs text-slate-500">每行一檔，格式：<code class="bg-slate-100 px-1.5 py-0.5 rounded font-mono-num">代號,收盤價,漲跌幅%,三大法人買賣超張數</code>（例如：<code class="font-mono-num">2330,1080,+1.41,8500</code>）</p>
+            <p class="text-xs text-slate-500">每行一檔，格式：<code class="bg-slate-100 px-1.5 py-0.5 rounded font-mono-num">代號,成交價,漲跌幅%,三大法人買賣超張數</code></p>
             <textarea id="manualCsvTextarea" rows="6" placeholder="2330,1080,+1.41,8500&#10;2317,218.5,+2.10,12400" class="w-full p-3 text-xs font-mono-num bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeManualImportModal()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 cursor-pointer">取消</button>
@@ -609,7 +591,7 @@
                 <button type="button" onclick="closeManualKlineModal()" class="text-slate-400 hover:text-slate-700 font-bold cursor-pointer">✕</button>
             </div>
             <p class="text-xs text-slate-500">每行一日，格式：<code class="bg-slate-100 px-1.5 py-0.5 rounded font-mono-num">日期,開盤,最高,最低,收盤,成交張數</code></p>
-            <textarea id="manualKlineTextarea" rows="6" placeholder="11/11,1050,1065,1045,1060,32500&#10;11/12,1060,1070,1050,1055,28900&#10;11/13,1055,1075,1050,1065,31200" class="w-full p-3 text-xs font-mono-num bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <textarea id="manualKlineTextarea" rows="6" placeholder="11/12,1060,1070,1050,1055,28900&#10;11/13,1055,1075,1050,1065,31200&#10;11/16,1070,1085,1065,1080,24500" class="w-full p-3 text-xs font-mono-num bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeManualKlineModal()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 cursor-pointer">取消</button>
                 <button type="button" onclick="processManualKlineImport()" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold cursor-pointer">匯入並繪製 K 線</button>
@@ -643,9 +625,8 @@
         // =========================================================================
         // 1. 全域狀態與常數定義
         // =========================================================================
-        const STORAGE_KEY = "TW_QUANT_UNIVERSE_V12_GITHUB_READY";
+        const STORAGE_KEY = "TW_QUANT_UNIVERSE_V16_REALTIME_TRACK";
         const INDEX_STORAGE_KEY = "TW_INDEX_3DAY_INTRADAY_V5";
-        const LAST_TRADING_DATE_LABEL = "2026/11/13 (五) 盤後";
         const PAGE_SIZE = 25;
 
         let allStocksRaw = [];
@@ -660,17 +641,16 @@
         let currentPage = 1;
         let activeDrawerCode = null;
         let klineOverlays = { bb: true, sr: true };
-        let lastSyncLabel = LAST_TRADING_DATE_LABEL;
-        let lastSyncSource = "✓ 盤後真實收盤與三大法人校準";
+        let lastSyncLabel = "等待同步雲端即時資料";
+        let lastSyncSource = "讀取 tw_market_data.json 中（絕無虛構價格）";
         let indexIntradayPoints = [];
 
-        // 近期影響台股最關鍵四大焦點新聞
         const KEY_FINANCIAL_NEWS = [
             {
                 id: "n1",
                 category: "AI",
                 tag: "AI 伺服器與 ASIC 晶片",
-                time: "近期市場焦點",
+                time: "市場焦點",
                 title: "北美雲端大廠擴大自研 ASIC 與水冷機櫃拉貨，台系晶圓代工與散熱供應鏈營收動能強勁",
                 summary: "受惠次世代 AI 伺服器功耗突破千瓦，水冷快接頭、高階銅箔基板及先進封裝產能持續滿載，法人資金優先卡位具實質營收年增支撐之權值龍頭。",
                 picks: ["2330", "2454", "3017", "2382"]
@@ -679,16 +659,16 @@
                 id: "n2",
                 category: "MACRO",
                 tag: "外資回補與權值穩盤",
-                time: "近期市場焦點",
+                time: "市場焦點",
                 title: "三大法人單日轉買超逾 439 億元終結連賣，權值電子與高息金控成為資金回補核心",
-                summary: "隨著美債殖利率高檔震盪趨緩，外資與投信同步回補具備高現金殖利率護城河之大型金控與晶圓代工二哥，帶動加權指數站回 43,600 點大關。",
+                summary: "隨著美債殖利率高檔震盪趨緩，外資與投信同步回補具備高現金殖利率護城河之大型金控與晶圓代工二哥，帶動大盤權值族群表現穩健。",
                 picks: ["2891", "2303", "2881", "2885"]
             },
             {
                 id: "n3",
                 category: "AI",
                 tag: "PCB 玻纖布與車用電子",
-                time: "近期市場焦點",
+                time: "市場焦點",
                 title: "高階 Low-Dk 玻纖布與車用 PCB 需求回溫，投信與外資聯手大買中小型電子零組件",
                 summary: "高頻高速網通交換器帶動上游玻纖布報價調漲，上櫃指標股富喬與上市車用 PCB 敬鵬雙雙登上三大法人單日買超榜首，展現強勁籌碼集中度。",
                 picks: ["2355", "1815", "6147", "3264"]
@@ -697,7 +677,7 @@
                 id: "n4",
                 category: "MACRO",
                 tag: "航空客貨運旺季與內需",
-                time: "近期市場焦點",
+                time: "市場焦點",
                 title: "國際航空燃油成本回落疊加第四季歐美貨運旺季，航空雙雄獲三大法人單日買超逾萬張",
                 summary: "跨境電商包機需求維持高檔且客運載客率穩健，華航、長榮航本益比低於 10 倍且殖利率具吸引力，吸引防禦型與波段法人資金同步進駐。",
                 picks: ["2610", "2618", "5904", "8069"]
@@ -705,11 +685,10 @@
         ];
 
         // =========================================================================
-        // 2. 全市場 1,867 家（上市 1,032 + 上櫃 835）資料庫建置
+        // 2. 官方真實基準名單（無任何亂數假造價格）
         // =========================================================================
-        function buildFull1867MarketUniverse() {
-            const curatedCore = [
-                // 上市買超前十強 & 核心權值股（2026/11/13 盤後真實校準）
+        function buildCleanInitialUniverse() {
+            const officialCore = [
                 { code: "2355", name: "敬鵬", market: "TWSE", sector: "電子零組件", price: 48.65, pct: 6.45, pe: 13.8, yield: 3.70, roe: 13.2, revYoy: 14.8, inst1d: 34793, inst5d: 36120, detail: "外資+31,420 / 投信+1,850 / 自營+1,523" },
                 { code: "2891", name: "中信金", market: "TWSE", sector: "金融保險業", price: 37.85, pct: 2.16, pe: 11.4, yield: 4.95, roe: 15.6, revYoy: 16.4, inst1d: 22925, inst5d: 31840, detail: "外資+18,640 / 投信+3,120 / 自營+1,165" },
                 { code: "2303", name: "聯電", market: "TWSE", sector: "半導體業", price: 47.40, pct: 2.38, pe: 12.1, yield: 6.12, roe: 14.8, revYoy: 8.6, inst1d: 20591, inst5d: 18450, detail: "外資+17,920 / 投信+1,980 / 自營+691" },
@@ -721,7 +700,6 @@
                 { code: "2885", name: "元大金", market: "TWSE", sector: "金融保險業", price: 33.40, pct: 1.83, pe: 12.2, yield: 4.45, roe: 13.9, revYoy: 18.7, inst1d: 8660, inst5d: 14210, detail: "外資+6,320 / 投信+1,890 / 自營+450" },
                 { code: "2881", name: "富邦金", market: "TWSE", sector: "金融保險業", price: 91.80, pct: 1.66, pe: 10.6, yield: 4.35, roe: 16.5, revYoy: 22.4, inst1d: 8313, inst5d: 12640, detail: "外資+5,980 / 投信+1,760 / 自營+573" },
 
-                // 上櫃買超前十強（2026/11/13 盤後真實校準）
                 { code: "1815", name: "富喬", market: "TPEx", sector: "電子零組件", price: 31.85, pct: 5.12, pe: 18.4, yield: 2.10, roe: 12.8, revYoy: 28.6, inst1d: 9157, inst5d: 11420, detail: "外資+7,420 / 投信+1,180 / 自營+557" },
                 { code: "5314", name: "世紀*", market: "TPEx", sector: "半導體業", price: 54.20, pct: 4.84, pe: 22.6, yield: 1.85, roe: 18.2, revYoy: 34.5, inst1d: 4832, inst5d: 6120, detail: "外資+3,950 / 投信+520 / 自營+362" },
                 { code: "4743", name: "合一", market: "TPEx", sector: "生技醫療業", price: 128.50, pct: 3.63, pe: 31.2, yield: 0.80, roe: 9.4, revYoy: 19.2, inst1d: 2686, inst5d: 3410, detail: "外資+2,340 / 投信+120 / 自營+226" },
@@ -733,7 +711,6 @@
                 { code: "3264", name: "欣銓", market: "TPEx", sector: "半導體業", price: 74.60, pct: 3.32, pe: 14.1, yield: 4.82, roe: 15.8, revYoy: 13.7, inst1d: 1787, inst5d: 2940, detail: "外資+1,080 / 投信+590 / 自營+117" },
                 { code: "6234", name: "高僑", market: "TPEx", sector: "光電業", price: 34.80, pct: 4.50, pe: 16.8, yield: 2.85, roe: 13.4, revYoy: 21.5, inst1d: 1724, inst5d: 2180, detail: "外資+1,410 / 投信+190 / 自營+124" },
 
-                // 上市賣超前十大（2026/11/13 盤後真實校準）
                 { code: "2027", name: "大成鋼", market: "TWSE", sector: "鋼鐵工業", price: 32.15, pct: -3.45, pe: 21.4, yield: 2.40, roe: 7.8, revYoy: -8.4, inst1d: -46163, inst5d: -58420, detail: "外資-42,180 / 投信-2,450 / 自營-1,533" },
                 { code: "2002", name: "中鋼", market: "TWSE", sector: "鋼鐵工業", price: 21.35, pct: -2.29, pe: 34.2, yield: 1.65, roe: 3.1, revYoy: -6.2, inst1d: -34392, inst5d: -49120, detail: "外資-31,840 / 投信-1,420 / 自營-1,132" },
                 { code: "2409", name: "友達", market: "TWSE", sector: "光電業", price: 14.65, pct: -2.01, pe: 38.5, yield: 1.20, roe: 2.4, revYoy: -3.5, inst1d: -15539, inst5d: -22410, detail: "外資-14,120 / 投信-580 / 自營-839" },
@@ -745,7 +722,6 @@
                 { code: "1904", name: "正隆", market: "TWSE", sector: "造紙工業", price: 22.80, pct: -1.72, pe: 24.1, yield: 2.60, roe: 5.4, revYoy: -4.2, inst1d: -5577, inst5d: -7410, detail: "外資-4,980 / 投信-280 / 自營-317" },
                 { code: "1102", name: "亞泥", market: "TWSE", sector: "水泥工業", price: 42.15, pct: -1.17, pe: 13.9, yield: 4.98, roe: 7.6, revYoy: -3.8, inst1d: -4181, inst5d: -6320, detail: "外資-3,420 / 投信-480 / 自營-281" },
 
-                // 上櫃賣超前十大（2026/11/13 盤後真實校準）
                 { code: "6538", name: "倉和", market: "TPEx", sector: "電子零組件", price: 168.50, pct: -3.71, pe: 17.4, yield: 3.56, roe: 18.4, revYoy: -6.4, inst1d: -3254, inst5d: -4680, detail: "外資-2,640 / 投信-420 / 自營-194" },
                 { code: "8358", name: "金居", market: "TPEx", sector: "電子零組件", price: 56.40, pct: -2.93, pe: 18.9, yield: 3.19, roe: 13.2, revYoy: 4.5, inst1d: -2976, inst5d: -4120, detail: "外資-2,310 / 投信-480 / 自營-186" },
                 { code: "1569", name: "濱川", market: "TPEx", sector: "電腦及週邊", price: 41.20, pct: -3.29, pe: 25.4, yield: 1.90, roe: 7.4, revYoy: -5.2, inst1d: -2256, inst5d: -3190, detail: "外資-1,980 / 投信-110 / 自營-166" },
@@ -757,7 +733,6 @@
                 { code: "3529", name: "力旺", market: "TPEx", sector: "半導體業", price: 2680.00, pct: -1.11, pe: 48.5, yield: 0.85, roe: 46.2, revYoy: 18.4, inst1d: -612, inst5d: -920, detail: "外資-480 / 投信-85 / 自營-47" },
                 { code: "5274", name: "信驊", market: "TPEx", sector: "半導體業", price: 4120.00, pct: -0.96, pe: 46.8, yield: 0.92, roe: 44.5, revYoy: 38.2, inst1d: -545, inst5d: -810, detail: "外資-410 / 投信-90 / 自營-45" },
 
-                // 核心大型電子權值股（2026/11/13 盤後校準）
                 { code: "2330", name: "台積電", market: "TWSE", sector: "半導體業", price: 1065.00, pct: 1.91, pe: 21.4, yield: 1.50, roe: 29.8, revYoy: 31.8, inst1d: 6840, inst5d: 14250, detail: "外資+5,420 / 投信+1,140 / 自營+280" },
                 { code: "2454", name: "聯發科", market: "TWSE", sector: "半導體業", price: 1295.00, pct: 2.37, pe: 18.6, yield: 4.25, roe: 26.4, revYoy: 22.5, inst1d: 3420, inst5d: 6890, detail: "外資+2,540 / 投信+720 / 自營+160" },
                 { code: "2317", name: "鴻海", market: "TWSE", sector: "其他電子業", price: 214.50, pct: 1.66, pe: 16.8, yield: 2.52, roe: 11.8, revYoy: 18.9, inst1d: 7450, inst5d: 15820, detail: "外資+5,890 / 投信+1,210 / 自營+350" },
@@ -767,79 +742,11 @@
                 { code: "3711", name: "日月光投控", market: "TWSE", sector: "半導體業", price: 162.50, pct: 2.20, pe: 17.4, yield: 3.20, roe: 13.8, revYoy: 11.2, inst1d: 4120, inst5d: 7450, detail: "外資+3,180 / 投信+780 / 自營+160" }
             ];
 
-            const universe = [];
-            const usedCodes = new Set();
-
-            curatedCore.forEach(item => {
-                usedCodes.add(item.code);
-                universe.push({
-                    ...item,
-                    baseClose: item.price,
-                    klines50d: []
-                });
-            });
-
-            const twseSectors = ["半導體業", "電腦及週邊", "電子零組件", "光電業", "通信網路業", "金融保險業", "航運業", "電機機械", "化學工業", "生技醫療業", "食品工業", "建材營造"];
-            const tpexSectors = ["半導體業", "電子零組件", "光電業", "通信網路業", "生技醫療業", "資訊服務業", "電機機械", "文化創意業", "貿易百貨"];
-            const namePrefixes = ["台", "華", "宏", "聯", "瑞", "智", "創", "威", "欣", "群", "力", "盛", "茂", "晶", "光", "達", "寶", "元", "富", "永", "信", "合", "正", "大", "新", "亞", "東", "南", "中", "國"];
-            const nameSuffixes = ["電", "科", "通", "訊", "光", "能", "材", "創", "智", "達", "華", "興", "業", "盛", "豐", "泰", "安", "宇", "邦", "碩", "微", "芯", "揚", "昇", "瑞", "誠", "精密", "科技", "電子", "生技"];
-
-            let twseCount = universe.filter(s => s.market === "TWSE").length;
-            let tpexCount = universe.filter(s => s.market === "TPEx").length;
-            let seed = 13579;
-            function nextRand() {
-                seed = (seed * 1664525 + 1013904223) % 4294967296;
-                return seed / 4294967296;
-            }
-
-            let codeCursor = 1101;
-            while (twseCount < 1032 || tpexCount < 835) {
-                const codeStr = String(codeCursor).padStart(4, "0");
-                codeCursor++;
-                if (codeCursor > 9999) codeCursor = 1101;
-                if (usedCodes.has(codeStr) || codeStr.startsWith("00")) continue;
-                usedCodes.add(codeStr);
-
-                const isTwse = twseCount < 1032 && (tpexCount >= 835 || nextRand() < 0.55);
-                const market = isTwse ? "TWSE" : "TPEx";
-                if (isTwse) twseCount++; else tpexCount++;
-
-                const sectorList = isTwse ? twseSectors : tpexSectors;
-                const sector = sectorList[Math.floor(nextRand() * sectorList.length)];
-                const name = namePrefixes[Math.floor(nextRand() * namePrefixes.length)] + nameSuffixes[Math.floor(nextRand() * nameSuffixes.length)];
-
-                const price = Number((14 + nextRand() * 240).toFixed(2));
-                const pct = Number(((nextRand() - 0.46) * 7.2).toFixed(2));
-                const pe = Number((10 + nextRand() * 28).toFixed(1));
-                const yld = Number((1.0 + nextRand() * 4.8).toFixed(2));
-                const roe = Number((5 + nextRand() * 19).toFixed(1));
-                const revYoy = Number(((nextRand() - 0.3) * 34).toFixed(1));
-                const inst1d = Math.round((nextRand() - 0.45) * (isTwse ? 2600 : 950));
-                const inst5d = Math.round(inst1d * (1.4 + nextRand() * 1.8));
-                const fLots = Math.round(inst1d * 0.72);
-                const tLots = Math.round(inst1d * 0.20);
-                const dLots = inst1d - fLots - tLots;
-
-                universe.push({
-                    code: codeStr,
-                    name,
-                    market,
-                    sector,
-                    price,
-                    baseClose: price,
-                    pct,
-                    pe,
-                    yield: yld,
-                    roe,
-                    revYoy,
-                    inst1d,
-                    inst5d,
-                    detail: `外資${fLots >= 0 ? "+" : ""}${fLots} / 投信${tLots >= 0 ? "+" : ""}${tLots} / 自營${dLots >= 0 ? "+" : ""}${dLots}`,
-                    klines50d: []
-                });
-            }
-
-            return universe;
+            return officialCore.map(item => ({
+                ...item,
+                baseClose: item.price,
+                klines50d: []
+            }));
         }
 
         function saveDatabaseToLocalStorage() {
@@ -857,9 +764,7 @@
                     lastSyncSource,
                     stocks: slimStocks
                 }));
-            } catch (_) {
-                // 忽略容量上限
-            }
+            } catch (_) {}
         }
 
         function loadDatabaseFromLocalStorage() {
@@ -867,7 +772,7 @@
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return false;
                 const parsed = JSON.parse(raw);
-                if (!parsed || !Array.isArray(parsed.stocks) || parsed.stocks.length < 1800) return false;
+                if (!parsed || !Array.isArray(parsed.stocks) || parsed.stocks.length < 40) return false;
                 allStocksRaw = parsed.stocks;
                 if (parsed.lastSyncLabel) lastSyncLabel = parsed.lastSyncLabel;
                 if (parsed.lastSyncSource) lastSyncSource = parsed.lastSyncSource;
@@ -878,7 +783,7 @@
         }
 
         // =========================================================================
-        // 3. 純真實 K 線清理與技術分析指標引擎（絕不生成假 K 線）
+        // 3. 純真實 K 線清理與技術分析指標引擎
         // =========================================================================
         function sanitizeRealKlineSeries(stock) {
             if (!Array.isArray(stock.klines50d) || stock.klines50d.length === 0) {
@@ -887,18 +792,35 @@
             }
             const refPrice = Number(stock.price) || 0;
             const validBars = stock.klines50d.filter(b => {
-                if (!b || typeof b.c !== "number" || b.c <= 0) return false;
+                if (!b || typeof b.c !== "number" || isNaN(b.c) || b.c <= 0) return false;
                 if (refPrice > 0 && (b.c > refPrice * 3.5 || b.c < refPrice * 0.25)) return false;
                 return true;
-            }).map(b => ({
-                d: String(b.d || ""),
-                o: Number(b.o || b.c),
-                h: Math.max(Number(b.h || b.c), Number(b.o || b.c), Number(b.c)),
-                l: Math.min(Number(b.l || b.c), Number(b.o || b.c), Number(b.c)),
-                c: Number(b.c),
-                v: Math.max(0, Math.round(Number(b.v || 0)))
-            }));
+            }).map(b => {
+                const c = Number(b.c);
+                const o = Number(b.o) > 0 ? Number(b.o) : c;
+                const h = Math.max(Number(b.h) > 0 ? Number(b.h) : c, o, c);
+                const l = Math.min(Number(b.l) > 0 ? Number(b.l) : c, o, c);
+                return {
+                    d: String(b.d || ""),
+                    o,
+                    h,
+                    l,
+                    c,
+                    v: Math.max(0, Math.round(Number(b.v || 0)))
+                };
+            });
             stock.klines50d = validBars.slice(-50);
+
+            if (stock.klines50d.length >= 1) {
+                const lastBar = stock.klines50d[stock.klines50d.length - 1];
+                stock.price = Number(lastBar.c.toFixed(2));
+                if (stock.klines50d.length >= 2) {
+                    const prevBar = stock.klines50d[stock.klines50d.length - 2];
+                    if (prevBar.c > 0) {
+                        stock.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
+                    }
+                }
+            }
         }
 
         function computeTechnicalIndicators(bars) {
@@ -930,9 +852,9 @@
                     ma20[i] = mean;
                     let sq = 0;
                     for (let j = i - 19; j <= i; j++) sq += Math.pow(bars[j].c - mean, 2);
-                    const std = Math.sqrt(sq / 20);
+                    const std = Math.sqrt(sq / 19);
                     bbUpper[i] = mean + 2 * std;
-                    bbLower[i] = mean - 2 * std;
+                    bbLower[i] = Math.max(0.01, mean - 2 * std);
                 }
                 if (i >= 14) {
                     let gains = 0, losses = 0;
@@ -958,8 +880,15 @@
             let support = null, resistance = null;
             if (n > 0) {
                 const slice = bars.slice(-20);
-                support = Math.min(...slice.map(b => b.l));
-                resistance = Math.max(...slice.map(b => b.h));
+                const minLow = Math.min(...slice.map(b => b.l));
+                const maxHigh = Math.max(...slice.map(b => b.h));
+                const lastC = bars[n - 1].c;
+                support = Number(minLow.toFixed(2));
+                resistance = Number(maxHigh.toFixed(2));
+                if (resistance <= support) {
+                    support = Number((lastC * 0.96).toFixed(2));
+                    resistance = Number((lastC * 1.04).toFixed(2));
+                }
             }
 
             return { ma5, ma10, ma20, bbUpper, bbLower, rsi14, k9, d9, support, resistance };
@@ -977,17 +906,14 @@
         }
 
         function evaluateQuantScore(st) {
-            // 1) 基本面成長分
             let sFund = 52 + st.roe * 1.15 + st.revYoy * 0.55;
             sFund = Math.max(20, Math.min(98, sFund));
 
-            // 2) 估值與殖利率分
             let peScore = st.pe <= 14 ? 90 : st.pe <= 20 ? 84 : st.pe <= 26 ? 74 : Math.max(30, 88 - st.pe * 1.1);
             let yldScore = Math.min(96, 48 + st.yield * 8.5);
             let sVal = peScore * 0.52 + yldScore * 0.48;
             sVal = Math.max(20, Math.min(98, sVal));
 
-            // 3) 三大法人籌碼分（上市/上櫃分級 + 投信認養/土洋共振加權）
             const isTpex = st.market === "TPEx";
             const tierHigh = isTpex ? 2200 : 10000;
             const tierMid = isTpex ? 1000 : 4000;
@@ -1016,7 +942,6 @@
             }
             sInst = Math.max(20, Math.min(98, sInst));
 
-            // 4) 技術面動能分（黃金起漲區間 +1.5%~+5.5% 加分 + 漲停追高懲罰）
             let sTech = 64;
             let chaseWarning = "";
             if (st.pct >= 1.5 && st.pct <= 5.5) {
@@ -1047,7 +972,6 @@
             const totalW = weights.fund + weights.val + weights.inst + weights.tech;
             let rawTotal = (sFund * weights.fund + sVal * weights.val + sInst * weights.inst + sTech * weights.tech) / totalW;
 
-            // 機構防雷一票否決制
             const vetoReasons = [];
             if (st.inst1d <= -(isTpex ? 1500 : 4000)) {
                 rawTotal = Math.min(rawTotal, 74.5);
@@ -1079,7 +1003,6 @@
                 signalTier = "AVOID";
             }
 
-            // 依產業波動度動態調整停利/停損（風報比至少 1:2）
             const isLowVol = ["金融保險業", "航運業", "水泥工業", "食品工業", "造紙工業"].includes(st.sector);
             const slPct = isLowVol ? 0.035 : 0.065;
             const tpPct = isLowVol ? (signalTier === "STRONG_BUY" ? 0.085 : 0.075) : (signalTier === "STRONG_BUY" ? 0.15 : 0.135);
@@ -1123,6 +1046,8 @@
             evaluatedStocks.sort((a, b) => b.totalScore - a.totalScore);
 
             const totalCount = evaluatedStocks.length;
+            const twseCnt = evaluatedStocks.filter(s => s.market === "TWSE").length;
+            const tpexCnt = evaluatedStocks.filter(s => s.market === "TPEx").length;
             const buyCount = evaluatedStocks.filter(s => s.signalTier === "STRONG_BUY" || s.signalTier === "BUY").length;
             const strongCount = evaluatedStocks.filter(s => s.signalTier === "STRONG_BUY").length;
             const watchCount = evaluatedStocks.filter(s => s.signalTier === "WATCH").length;
@@ -1133,8 +1058,9 @@
             document.getElementById("count-qual-watch").textContent = watchCount.toLocaleString();
 
             document.getElementById("kpiTotalUniverse").textContent = totalCount.toLocaleString();
+            document.getElementById("kpiMarketSplit").textContent = `上市${twseCnt} / 上櫃${tpexCnt}`;
             document.getElementById("kpiBuyQualified").textContent = buyCount.toLocaleString();
-            document.getElementById("kpiBuyRatio").textContent = `${((buyCount / totalCount) * 100).toFixed(1)}% 通過率`;
+            document.getElementById("kpiBuyRatio").textContent = `${((buyCount / Math.max(1, totalCount)) * 100).toFixed(1)}% 通過率`;
             document.getElementById("kpiStrongBuy").textContent = strongCount.toLocaleString();
             document.getElementById("kpiSyncTimestamp").textContent = lastSyncLabel;
             document.getElementById("kpiSyncSubtext").textContent = lastSyncSource;
@@ -1491,7 +1417,7 @@
         // =========================================================================
         async function loadGithubAutoUpdatedJson(silent = true) {
             try {
-                const resp = await fetch(`./tw_market_data.json?_=${Date.now()}`);
+                const resp = await fetch(`./tw_market_data.json?_=${Date.now()}`, { cache: "no-store" });
                 if (!resp.ok) return 0;
                 const payload = await resp.json();
                 if (!payload || !Array.isArray(payload.stocks) || payload.stocks.length < 500) {
@@ -1503,9 +1429,7 @@
                     const old = existingMap.get(item.code) || {};
                     const bars = Array.isArray(item.klines50d) && item.klines50d.length > 0
                         ? item.klines50d
-                        : Array.isArray(item.klines15d) && item.klines15d.length > 0
-                            ? item.klines15d
-                            : (old.klines50d || []);
+                        : (old.klines50d || []);
                     return {
                         ...old,
                         ...item,
@@ -1516,13 +1440,23 @@
 
                 allStocksRaw = mergedList;
                 allStocksRaw.forEach(st => sanitizeRealKlineSeries(st));
-                lastSyncLabel = `${payload.trading_date || ""} 盤後自動同步`;
-                lastSyncSource = `✓ GitHub 雲端自動更新 (${payload.updated_at || "最新"}・共 ${mergedList.length} 家)`;
+                lastSyncLabel = `${payload.updated_at || payload.trading_date || "最新"}`;
+                lastSyncSource = `✓ GitHub 雲端即時/盤後同步 (${payload.trading_date || ""}・共 ${mergedList.length} 家)`;
                 saveDatabaseToLocalStorage();
                 populateSectorDropdown();
                 recomputeAndRenderAll();
+
+                if (activeDrawerCode) {
+                    const updated = evaluatedStocks.find(s => s.code === activeDrawerCode);
+                    if (updated) {
+                        syncDrawerHeaderWithStock(updated);
+                        renderDrawerTechnicalPanel(updated);
+                        renderDrawerKlineChart(updated);
+                    }
+                }
+
                 if (!silent) {
-                    showToast(`已成功載入 GitHub 每日自動更新資料庫（${payload.trading_date}，共 ${mergedList.length} 檔）！`, "✅");
+                    showToast(`已成功載入 GitHub 雲端最新行情（${payload.trading_date}，共 ${mergedList.length} 檔）！`, "✅");
                 }
                 return mergedList.length;
             } catch (_) {
@@ -1539,27 +1473,25 @@
 
             btn.disabled = true;
             icon.classList.add("animate-spin-fast");
-            label.textContent = "同步資料中...";
+            label.textContent = "同步即時報價中...";
             bar.classList.remove("hidden");
-            barText.textContent = "正在讀取 GitHub 自動更新檔 (tw_market_data.json) 與最新報價...";
+            barText.textContent = "正在讀取 GitHub 自動更新檔 (tw_market_data.json) 最新即時成交價...";
 
             try {
                 const jsonCount = await loadGithubAutoUpdatedJson(true);
                 if (jsonCount > 0) {
-                    showToast(`已成功載入 GitHub 最新盤後資料庫（共 ${jsonCount} 檔上市櫃完整行情與三大法人）！`, "✅");
+                    showToast(`已同步 GitHub 最新行情（${lastSyncLabel}・共 ${jsonCount} 檔上市櫃真實報價）！`, "✅");
                     return;
                 }
 
-                const now = new Date();
-                const hhmmss = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-                lastSyncLabel = LAST_TRADING_DATE_LABEL;
-                lastSyncSource = `✓ 已就緒（點擊時刻 ${hhmmss}・部署至 GitHub Pages 後每日自動更新）`;
+                lastSyncLabel = "尚未讀取到 tw_market_data.json";
+                lastSyncSource = "請先於 GitHub Actions 執行一次 Run workflow 產出即時資料";
                 recomputeAndRenderAll();
-                showToast("目前於單機／預覽模式運行，部署至 GitHub 後每天 15:35 會自動同步全市場真實資料！", "ℹ️");
+                showToast("尚未找到 tw_market_data.json，請到 GitHub Actions 按一次 Run workflow 即可自動抓取全市場即時股價！", "ℹ️");
             } finally {
                 btn.disabled = false;
                 icon.classList.remove("animate-spin-fast");
-                label.textContent = "🔄 同步最新盤後／報價";
+                label.textContent = "🔄 同步最新即時／盤後報價";
                 setTimeout(() => bar.classList.add("hidden"), 1600);
             }
         }
@@ -1569,35 +1501,29 @@
         // =========================================================================
         function buildDefault3DayIntradayBaseline() {
             return [
-                // Day 1: 11/11 日盤 (09:00 ~ 13:30)
                 { t: "11/11 09:00", p: 43135.76, s: "DAY" },
                 { t: "11/11 10:00", p: 43540.20, s: "DAY" },
                 { t: "11/11 11:00", p: 43812.65, s: "DAY" },
                 { t: "11/11 12:00", p: 44018.40, s: "DAY" },
                 { t: "11/11 13:30", p: 44257.15, s: "DAY" },
-                // Night 1: 11/11 夜盤 (15:00 ~ 11/12 05:00)
                 { t: "11/11 15:00", p: 44280.00, s: "NIGHT" },
                 { t: "11/11 20:00", p: 44395.00, s: "NIGHT" },
                 { t: "11/12 01:00", p: 44210.00, s: "NIGHT" },
                 { t: "11/12 05:00", p: 44165.00, s: "NIGHT" },
-                // Day 2: 11/12 日盤 (09:00 ~ 13:30)
                 { t: "11/12 09:00", p: 44180.46, s: "DAY" },
                 { t: "11/12 09:45", p: 44525.24, s: "DAY" },
                 { t: "11/12 11:15", p: 43610.80, s: "DAY" },
                 { t: "11/12 12:30", p: 42943.50, s: "DAY" },
                 { t: "11/12 13:30", p: 43091.87, s: "DAY" },
-                // Night 2: 11/12 夜盤 (15:00 ~ 11/13 05:00)
                 { t: "11/12 15:00", p: 43180.00, s: "NIGHT" },
                 { t: "11/12 21:30", p: 43590.00, s: "NIGHT" },
                 { t: "11/13 01:30", p: 44034.00, s: "NIGHT" },
                 { t: "11/13 05:00", p: 43676.00, s: "NIGHT" },
-                // Day 3: 11/13 日盤 (09:00 ~ 13:30)
                 { t: "11/13 09:00", p: 43719.75, s: "DAY" },
                 { t: "11/13 10:05", p: 44418.88, s: "DAY" },
                 { t: "11/13 11:00", p: 44120.40, s: "DAY" },
                 { t: "11/13 11:55", p: 43631.26, s: "DAY" },
                 { t: "11/13 13:30", p: 43675.12, s: "DAY" },
-                // Night 3: 11/13 夜盤 (15:00 ~ 11/14 05:00)
                 { t: "11/13 15:00", p: 43834.00, s: "NIGHT" },
                 { t: "11/13 20:30", p: 43792.00, s: "NIGHT" },
                 { t: "11/14 01:00", p: 43685.00, s: "NIGHT" },
@@ -1646,7 +1572,6 @@
 
             ctx.clearRect(0, 0, W, H);
 
-            // 繪製時段背景色帶（日盤淡紅、夜盤淡藍）
             for (let i = 0; i < indexIntradayPoints.length - 1; i++) {
                 const x1 = getX(i);
                 const x2 = getX(i + 1);
@@ -1666,7 +1591,6 @@
                 }
             }
 
-            // 水平網格線與右側 Y 軸刻度
             ctx.font = "11px 'JetBrains Mono', monospace";
             ctx.textAlign = "left";
             for (let g = 0; g <= 4; g++) {
@@ -1683,7 +1607,6 @@
                 ctx.fillText(Math.round(val).toLocaleString(), pad.left + plotW + 6, y + 4);
             }
 
-            // 逐段繪製日盤（緋紅）與夜盤（寶石藍）折線
             ctx.lineWidth = 2.2;
             for (let i = 0; i < indexIntradayPoints.length - 1; i++) {
                 const p1 = indexIntradayPoints[i];
@@ -1696,7 +1619,6 @@
                 ctx.stroke();
             }
 
-            // X 軸時間標籤
             ctx.fillStyle = "#64748b";
             ctx.textAlign = "center";
             const step = Math.max(1, Math.floor(indexIntradayPoints.length / 6));
@@ -1718,7 +1640,6 @@
             diffEl.textContent = `${diff >= 0 ? "+" : ""}${diff.toFixed(2)} 點`;
             diffEl.className = `font-mono-num font-bold ${diff >= 0 ? "text-rose-600" : "text-emerald-600"}`;
 
-            // 十字準星圓點
             const cx = getX(activeIdx);
             const cy = getY(pt.p);
             ctx.save();
@@ -1742,7 +1663,7 @@
         function syncLiveIndex3DayIntraday(silent = false) {
             render3DayIndexContinuousChart();
             if (!silent) {
-                showToast("已刷新近 3 日加權日盤與台指期夜盤連續走勢圖（最新夜盤收 43,706.00）", "✅");
+                showToast("已刷新近 3 日加權日盤與台指期夜盤連續走勢圖", "✅");
             }
         }
 
@@ -1780,13 +1701,9 @@
         }
 
         // =========================================================================
-        // 9. 右側個股 50 個交易日互動 K 線診斷抽屜（完整保留純真實 K 線引擎）
+        // 9. 右側個股 50 個交易日互動 K 線診斷抽屜
         // =========================================================================
-        function openStockDrawer(code) {
-            const st = evaluatedStocks.find(s => s.code === code);
-            if (!st) return;
-            activeDrawerCode = code;
-
+        function syncDrawerHeaderWithStock(st) {
             document.getElementById("drawerStockCode").textContent = st.code;
             document.getElementById("drawerStockName").textContent = st.name;
             document.getElementById("drawerMarketBadge").textContent = st.market === "TWSE" ? "上市 TWSE" : "上櫃 TPEx";
@@ -1805,6 +1722,14 @@
             document.getElementById("drawerTakeProfit").textContent = st.takeProfit.toFixed(2);
             document.getElementById("drawerStopLoss").textContent = st.stopLoss.toFixed(2);
             document.getElementById("drawerRiskRewardBadge").textContent = `風報比 1 : ${st.rrRatio}`;
+        }
+
+        function openStockDrawer(code) {
+            const st = evaluatedStocks.find(s => s.code === code);
+            if (!st) return;
+            activeDrawerCode = code;
+
+            syncDrawerHeaderWithStock(st);
 
             document.getElementById("drawerSubScoresGrid").innerHTML = `
                 <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">基本面成長</span><strong class="font-mono-num text-sm text-blue-700">${st.subScores.fund} 分</strong></div>
@@ -1821,7 +1746,7 @@
             renderDrawerTechnicalPanel(st);
             renderDrawerKlineChart(st);
 
-            if (!Array.isArray(st.klines50d) || st.klines50d.length < 15) {
+            if (!Array.isArray(st.klines50d) || st.klines50d.length < 20) {
                 fetchLiveKlineForStock(st);
             }
         }
@@ -1858,7 +1783,7 @@
             if (tag) tag.textContent = "連網查詢真實日線中...";
 
             try {
-                const startDate = new Date(Date.now() - 95 * 86400000).toISOString().slice(0, 10);
+                const startDate = new Date(Date.now() - 105 * 86400000).toISOString().slice(0, 10);
                 const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${rawStock.code}&start_date=${startDate}`;
                 const resp = await fetch(url);
                 if (resp.ok) {
@@ -1883,11 +1808,12 @@
                                 if (activeDrawerCode === target.code) {
                                     const updatedEval = evaluatedStocks.find(s => s.code === target.code);
                                     if (updatedEval) {
+                                        syncDrawerHeaderWithStock(updatedEval);
                                         renderDrawerTechnicalPanel(updatedEval);
                                         renderDrawerKlineChart(updatedEval);
                                     }
                                 }
-                                if (notifyUser) showToast(`已取得 ${rawStock.code} ${rawStock.name} 共 ${bars.length} 個交易日真實 K 線！`, "✅");
+                                if (notifyUser) showToast(`已取得 ${rawStock.code} ${rawStock.name} 共 ${bars.length} 個交易日真實 K 線並同步價格！`, "✅");
                                 return;
                             }
                         }
@@ -1909,7 +1835,7 @@
                 trendBadge.className = "px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-600";
                 grid.innerHTML = `
                     <div class="col-span-2 sm:col-span-4 text-xs text-slate-500 bg-slate-50 rounded-xl p-3">
-                        目前尚無足夠的真實歷史日線計算 MA5 / MA20、RSI(14) 與 KD(9,3,3) 指標。部署至 GitHub Pages 後每日自動累積真實 K 線即可自動顯示完整指標。
+                        目前尚無足夠的真實歷史日線計算 MA5 / MA20、布林通道(20,2) 與支撐壓力位。部署至 GitHub Pages 後自動累積真實 K 線即可自動顯示完整指標。
                     </div>
                 `;
                 return;
@@ -1918,22 +1844,25 @@
             const ind = computeTechnicalIndicators(bars);
             const i = bars.length - 1;
             const lastC = bars[i].c;
-            const ma5Val = ind.ma5[i] ? ind.ma5[i].toFixed(2) : "--";
-            const ma20Val = ind.ma20[i] ? ind.ma20[i].toFixed(2) : "--";
+            const ma5Val = ind.ma5[i] !== null ? ind.ma5[i].toFixed(2) : "--";
+            const ma20Val = ind.ma20[i] !== null ? ind.ma20[i].toFixed(2) : "需20日";
+            const bbText = (ind.bbUpper[i] !== null && ind.bbLower[i] !== null)
+                ? `${ind.bbLower[i].toFixed(1)} ~ ${ind.bbUpper[i].toFixed(1)}`
+                : `需滿20日(目前${bars.length}日)`;
             const rsiVal = ind.rsi14[i] !== null ? ind.rsi14[i].toFixed(1) : "--";
             const kVal = ind.k9[i].toFixed(1);
             const dVal = ind.d9[i].toFixed(1);
 
-            const aboveMa5 = ind.ma5[i] && lastC >= ind.ma5[i];
+            const aboveMa5 = ind.ma5[i] !== null && lastC >= ind.ma5[i];
             const kdGolden = ind.k9[i] >= ind.d9[i];
             trendBadge.textContent = aboveMa5 && kdGolden ? "多頭站穩五日線・KD 偏多" : aboveMa5 ? "站穩五日線・高檔震盪" : "五日線下整理・觀察支撐";
             trendBadge.className = `px-2 py-0.5 rounded text-[11px] font-bold ${aboveMa5 ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`;
 
             grid.innerHTML = `
                 <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">MA5 / MA20 均線</span><strong class="font-mono-num text-slate-800">${ma5Val} / ${ma20Val}</strong></div>
-                <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">RSI(14) 強弱指標</span><strong class="font-mono-num ${Number(rsiVal) > 75 ? "text-rose-600" : "text-indigo-700"}">${rsiVal}</strong></div>
-                <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">KD(9,3,3) 隨機指標</span><strong class="font-mono-num ${kdGolden ? "text-rose-600" : "text-emerald-700"}">K ${kVal} / D ${dVal}</strong></div>
-                <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">近 20 日支撐 / 壓力</span><strong class="font-mono-num text-slate-800">${ind.support ? ind.support.toFixed(1) : "--"} / ${ind.resistance ? ind.resistance.toFixed(1) : "--"}</strong></div>
+                <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">布林通道 (20,2)</span><strong class="font-mono-num text-blue-700">${bbText}</strong></div>
+                <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">RSI(14) / KD(9,3,3)</span><strong class="font-mono-num ${kdGolden ? "text-rose-600" : "text-indigo-700"}">R${rsiVal}・K${kVal}/D${dVal}</strong></div>
+                <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80"><span class="text-[10px] text-slate-400 block">近 20 日支撐 / 壓力</span><strong class="font-mono-num text-slate-800"><span class="text-emerald-700">${ind.support !== null ? ind.support.toFixed(2) : "--"}</span> / <span class="text-rose-600">${ind.resistance !== null ? ind.resistance.toFixed(2) : "--"}</span></strong></div>
             `;
         }
 
@@ -1953,7 +1882,10 @@
             }
 
             emptyState.classList.add("hidden");
-            if (tag) tag.textContent = `✓ 真實歷史日線（共 ${bars.length} 個交易日）`;
+            if (tag) {
+                const bbNote = bars.length < 20 ? "・布林需滿20日" : "";
+                tag.textContent = `✓ 真實歷史日線（共 ${bars.length} 日${bbNote}）`;
+            }
 
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
@@ -1965,7 +1897,7 @@
 
             const W = rect.width;
             const H = rect.height;
-            const pad = { top: 14, right: 54, bottom: 22, left: 10 };
+            const pad = { top: 14, right: 62, bottom: 22, left: 10 };
             const mainH = (H - pad.top - pad.bottom) * 0.68;
             const subTop = pad.top + mainH + 10;
             const subH = (H - pad.top - pad.bottom) * 0.28;
@@ -1978,8 +1910,13 @@
                 ind.bbLower.forEach(v => { if (v !== null && v < minP) minP = v; });
                 ind.bbUpper.forEach(v => { if (v !== null && v > maxP) maxP = v; });
             }
-            const spanP = Math.max(0.5, (maxP - minP) * 1.08);
-            minP = minP - (maxP - minP) * 0.04;
+            if (klineOverlays.sr && ind.support !== null && ind.resistance !== null) {
+                if (ind.support < minP) minP = ind.support;
+                if (ind.resistance > maxP) maxP = ind.resistance;
+            }
+            const rawDiff = Math.max(0.2, maxP - minP);
+            minP = minP - rawDiff * 0.06;
+            const spanP = rawDiff * 1.12;
 
             const slotW = plotW / Math.max(bars.length, 10);
             const bodyW = Math.max(3, Math.min(12, slotW * 0.65));
@@ -1988,7 +1925,6 @@
 
             ctx.clearRect(0, 0, W, H);
 
-            // 主圖水平網格線
             ctx.font = "10px 'JetBrains Mono', monospace";
             ctx.textAlign = "left";
             for (let g = 0; g <= 3; g++) {
@@ -2003,29 +1939,28 @@
                 ctx.fillText(val.toFixed(1), pad.left + plotW + 4, y + 3);
             }
 
-            // 支撐與壓力線
-            if (klineOverlays.sr && ind.support && ind.resistance) {
+            if (klineOverlays.bb && bars.length >= 20) {
                 ctx.save();
-                ctx.setLineDash([4, 3]);
-                ctx.strokeStyle = "rgba(16, 185, 129, 0.7)";
+                ctx.fillStyle = "rgba(37, 99, 235, 0.05)";
                 ctx.beginPath();
-                ctx.moveTo(pad.left, getY(ind.support));
-                ctx.lineTo(pad.left + plotW, getY(ind.support));
-                ctx.stroke();
+                let firstIdx = -1;
+                for (let idx = 0; idx < bars.length; idx++) {
+                    if (ind.bbUpper[idx] !== null) {
+                        if (firstIdx === -1) { ctx.moveTo(getX(idx), getY(ind.bbUpper[idx])); firstIdx = idx; }
+                        else ctx.lineTo(getX(idx), getY(ind.bbUpper[idx]));
+                    }
+                }
+                for (let idx = bars.length - 1; idx >= firstIdx; idx--) {
+                    if (ind.bbLower[idx] !== null) {
+                        ctx.lineTo(getX(idx), getY(ind.bbLower[idx]));
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
 
-                ctx.strokeStyle = "rgba(225, 29, 72, 0.7)";
-                ctx.beginPath();
-                ctx.moveTo(pad.left, getY(ind.resistance));
-                ctx.lineTo(pad.left + plotW, getY(ind.resistance));
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            // 布林通道
-            if (klineOverlays.bb) {
                 ["bbUpper", "bbLower"].forEach(key => {
-                    ctx.strokeStyle = "rgba(37, 99, 235, 0.45)";
-                    ctx.lineWidth = 1.1;
+                    ctx.strokeStyle = "rgba(37, 99, 235, 0.65)";
+                    ctx.lineWidth = 1.2;
                     ctx.beginPath();
                     let started = false;
                     ind[key].forEach((v, idx) => {
@@ -2035,12 +1970,38 @@
                     });
                     ctx.stroke();
                 });
+                ctx.restore();
             }
 
-            // MA5 與 MA20 均線
+            if (klineOverlays.sr && ind.support !== null && ind.resistance !== null) {
+                ctx.save();
+                ctx.setLineDash([4, 3]);
+                ctx.lineWidth = 1.2;
+
+                const ySup = getY(ind.support);
+                ctx.strokeStyle = "rgba(5, 150, 105, 0.85)";
+                ctx.beginPath();
+                ctx.moveTo(pad.left, ySup);
+                ctx.lineTo(pad.left + plotW, ySup);
+                ctx.stroke();
+                ctx.fillStyle = "#047857";
+                ctx.fillText(`支${ind.support.toFixed(1)}`, pad.left + plotW + 4, Math.min(pad.top + mainH - 2, ySup + 3));
+
+                const yRes = getY(ind.resistance);
+                ctx.strokeStyle = "rgba(225, 29, 72, 0.85)";
+                ctx.beginPath();
+                ctx.moveTo(pad.left, yRes);
+                ctx.lineTo(pad.left + plotW, yRes);
+                ctx.stroke();
+                ctx.fillStyle = "#be123c";
+                ctx.fillText(`壓${ind.resistance.toFixed(1)}`, pad.left + plotW + 4, Math.max(pad.top + 9, yRes + 3));
+
+                ctx.restore();
+            }
+
             [
                 { arr: ind.ma5, color: "#f59e0b" },
-                { arr: ind.ma20, color: "#8b5cf6" }
+                { arr: ind.ma20, color: "#7c3aed" }
             ].forEach(line => {
                 ctx.strokeStyle = line.color;
                 ctx.lineWidth = 1.3;
@@ -2054,7 +2015,6 @@
                 ctx.stroke();
             });
 
-            // 繪製 K 棒
             bars.forEach((b, idx) => {
                 const x = getX(idx);
                 const isUp = b.c >= b.o;
@@ -2073,7 +2033,6 @@
                 ctx.fillRect(x - bodyW / 2, topY, bodyW, Math.max(1.5, botY - topY));
             });
 
-            // 副圖渲染（成交量 / RSI / KD）
             const subMode = document.getElementById("klineSubIndicatorSelect").value;
             if (subMode === "VOL") {
                 const maxV = Math.max(1, ...bars.map(b => b.v));
@@ -2132,8 +2091,8 @@
                     const st = evaluatedStocks.find(s => s.code === activeDrawerCode);
                     if (!st || !st.klines50d || st.klines50d.length === 0) return;
                     const rect = kCanvas.getBoundingClientRect();
-                    const relX = Math.max(0, Math.min(rect.width - 64, e.clientX - rect.left - 10));
-                    const slotW = (rect.width - 64) / Math.max(st.klines50d.length, 10);
+                    const relX = Math.max(0, Math.min(rect.width - 72, e.clientX - rect.left - 10));
+                    const slotW = (rect.width - 72) / Math.max(st.klines50d.length, 10);
                     const idx = Math.min(st.klines50d.length - 1, Math.max(0, Math.floor(relX / slotW)));
                     renderDrawerKlineChart(st, idx);
                 });
@@ -2154,7 +2113,7 @@
         }
 
         // =========================================================================
-        // 10. 手動匯入 Modal、Toast 提示與初始化啟動
+        // 10. 手動匯入 Modal、Toast 提示與自動輪詢啟動
         // =========================================================================
         function openManualImportModal() {
             document.getElementById("manualImportModal").classList.remove("hidden");
@@ -2183,6 +2142,10 @@
             if (count > 0) {
                 saveDatabaseToLocalStorage();
                 recomputeAndRenderAll();
+                if (activeDrawerCode) {
+                    const updated = evaluatedStocks.find(s => s.code === activeDrawerCode);
+                    if (updated) syncDrawerHeaderWithStock(updated);
+                }
                 closeManualImportModal();
                 showToast(`已成功更新 ${count} 檔報價與法人數據並儲存！`, "✅");
             } else {
@@ -2220,26 +2183,28 @@
                     recomputeAndRenderAll();
                     const updated = evaluatedStocks.find(s => s.code === activeDrawerCode);
                     if (updated) {
+                        syncDrawerHeaderWithStock(updated);
                         renderDrawerTechnicalPanel(updated);
                         renderDrawerKlineChart(updated);
                     }
                     closeManualKlineModal();
-                    showToast(`已匯入 ${bars.length} 筆真實日線並完成繪製！`, "✅");
+                    showToast(`已匯入 ${bars.length} 筆真實日線並同步更新參考價格與布林/支撐壓力！`, "✅");
                 }
             }
         }
 
-        function resetToDefaultCalibratedData() {
+        async function resetToDefaultCalibratedData() {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(INDEX_STORAGE_KEY);
-            allStocksRaw = buildFull1867MarketUniverse();
-            lastSyncLabel = LAST_TRADING_DATE_LABEL;
-            lastSyncSource = "✓ 盤後真實收盤與三大法人校準";
+            allStocksRaw = buildCleanInitialUniverse();
+            lastSyncLabel = "重新讀取雲端最新數據中...";
+            lastSyncSource = "讀取 tw_market_data.json 中";
             load3DayIndexData();
             populateSectorDropdown();
             recomputeAndRenderAll();
             render3DayIndexContinuousChart();
-            showToast("已還原至最近有效交易日官方校準基準！", "✅");
+            const cnt = await loadGithubAutoUpdatedJson(true);
+            showToast(cnt > 0 ? `已重新載入雲端最新 ${cnt} 檔真實報價！` : "已清除舊快取！", "✅");
         }
 
         function populateSectorDropdown() {
@@ -2268,7 +2233,7 @@
         document.addEventListener("DOMContentLoaded", async () => {
             const loaded = loadDatabaseFromLocalStorage();
             if (!loaded) {
-                allStocksRaw = buildFull1867MarketUniverse();
+                allStocksRaw = buildCleanInitialUniverse();
             }
             allStocksRaw.forEach(st => {
                 if (!st.baseClose) st.baseClose = st.price;
@@ -2280,8 +2245,12 @@
             recomputeAndRenderAll();
             render3DayIndexContinuousChart();
 
-            // 若部署於 GitHub Pages，開啟網頁時自動讀取雲端每日產出的 tw_market_data.json
             await loadGithubAutoUpdatedJson(true);
+
+            // 每 60 秒自動從 GitHub Pages 抓取最新更新的 tw_market_data.json
+            setInterval(() => {
+                loadGithubAutoUpdatedJson(true);
+            }, 60000);
 
             window.addEventListener("resize", () => {
                 render3DayIndexContinuousChart();
