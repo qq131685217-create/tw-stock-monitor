@@ -17,9 +17,10 @@ TPEX_QUOTES_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
 TPEX_PERATIO_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis"
 TPEX_3INST_URL = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading"
 
-# 證交所即時行情專線 API (盤中 09:00 ~ 13:35 即時成交價)
+# 證交所即時行情專線 API 與 Yahoo Finance 批量即時報價 API (盤中 09:00 ~ 13:35)
 TWSE_MIS_HOME_URL = "https://mis.twse.com.tw/stock/fibest.jsp"
 TWSE_MIS_REALTIME_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
+YAHOO_QUOTE_BATCH_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 
 OUTPUT_JSON = "tw_market_data.json"
 
@@ -98,12 +99,82 @@ def is_intraday_session(now_tw):
     return 900 <= hhmm <= 1335
 
 
+def fetch_realtime_yahoo_prices(stocks_map, now_tw):
+    """通道一：透過 Yahoo Finance 批量接口抓取全市場 1,867 檔當下盤中即時成交價（GitHub 雲端直連秒過）"""
+    symbols = []
+    sym_to_code = {}
+    for code, st in stocks_map.items():
+        suffix = ".TW" if st["market"] == "TWSE" else ".TWO"
+        sym = f"{code}{suffix}"
+        symbols.append(sym)
+        sym_to_code[sym] = code
+
+    updated_cnt = 0
+    batch_size = 150
+    today_mmdd = now_tw.strftime("%m/%d")
+    y_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json"
+    }
+
+    for i in range(0, len(symbols), batch_size):
+        batch = symbols[i:i + batch_size]
+        url = f"{YAHOO_QUOTE_BATCH_URL}?symbols={','.join(batch)}"
+        try:
+            resp = requests.get(url, headers=y_headers, timeout=15)
+            if resp.status_code != 200:
+                continue
+            results = resp.json().get("quoteResponse", {}).get("result", [])
+            for item in results:
+                sym = str(item.get("symbol", "")).strip()
+                code = sym_to_code.get(sym)
+                if not code or code not in stocks_map:
+                    continue
+                st = stocks_map[code]
+                live_p = safe_float(item.get("regularMarketPrice"))
+                prev_c = safe_float(item.get("regularMarketPreviousClose"), st["price"])
+                if live_p <= 0:
+                    continue
+                if prev_c > 0 and not (prev_c * 0.895 <= live_p <= prev_c * 1.105):
+                    continue
+
+                open_p = safe_float(item.get("regularMarketOpen"), live_p)
+                high_p = safe_float(item.get("regularMarketDayHigh"), live_p)
+                low_p = safe_float(item.get("regularMarketDayLow"), live_p)
+                vol_lots = max(1, round(safe_int(item.get("regularMarketVolume")) / 1000))
+                pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else st["pct"]
+
+                st["price"] = round(live_p, 2)
+                st["pct"] = pct
+                st["_todayBar"] = {
+                    "d": today_mmdd,
+                    "o": round(open_p if open_p > 0 else live_p, 2),
+                    "h": round(max(high_p, live_p), 2),
+                    "l": round(min(low_p, live_p) if low_p > 0 else live_p, 2),
+                    "c": round(live_p, 2),
+                    "v": vol_lots
+                }
+                st["_liveUpdated"] = True
+                updated_cnt += 1
+        except Exception as e:
+            print(f"[警告] Yahoo 批量即時報價批次 {i} 略過: {e}")
+        time.sleep(0.2)
+
+    print(f"=== Yahoo Finance 盤中即時報價同步完成：共更新 {updated_cnt} 檔當下真實成交價 ===")
+    return updated_cnt
+
+
 def fetch_realtime_mis_prices(stocks_map, now_tw):
-    """先向證交所 MIS 首頁取得 Session Cookie，再批量抓取全市場 1,867 檔當下真實盤中成交價"""
+    """通道二：證交所 MIS 即時行情專線補齊剩餘未更新標的"""
     all_keys = []
     for code, st in stocks_map.items():
+        if st.get("_liveUpdated"):
+            continue
         prefix = "tse" if st["market"] == "TWSE" else "otc"
         all_keys.append(f"{prefix}_{code}.tw")
+
+    if not all_keys:
+        return 0
 
     updated_cnt = 0
     batch_size = 60
@@ -113,9 +184,9 @@ def fetch_realtime_mis_prices(stocks_map, now_tw):
 
     try:
         session.get(TWSE_MIS_HOME_URL, timeout=12)
-        time.sleep(0.5)
-    except Exception as e:
-        print(f"[警告] 證交所 MIS Cookie 握手異常: {e}")
+        time.sleep(0.4)
+    except Exception:
+        pass
 
     for i in range(0, len(all_keys), batch_size):
         batch = all_keys[i:i + batch_size]
@@ -123,56 +194,52 @@ def fetch_realtime_mis_prices(stocks_map, now_tw):
         url = f"{TWSE_MIS_REALTIME_URL}?ex_ch={ex_ch}&json=1&delay=0&_={int(time.time() * 1000)}"
         try:
             resp = session.get(url, timeout=15)
-            data = resp.json()
-            msg_arr = data.get("msgArray") or []
+            msg_arr = resp.json().get("msgArray") or []
             for item in msg_arr:
                 code = str(item.get("c", "")).strip()
                 if code not in stocks_map:
                     continue
                 st = stocks_map[code]
-                base_p = st["price"]
+                yesterday_close = safe_float(item.get("y"), st["price"])
                 last_trade = safe_float(item.get("z"))
-                yesterday_close = safe_float(item.get("y"))
+                # 若當下撮合間隔 z 為 "-"，取最佳買一價作為參考現價
+                if last_trade <= 0:
+                    bid_str = str(item.get("b", "")).split("_")[0]
+                    last_trade = safe_float(bid_str)
                 if last_trade <= 0:
                     continue
 
-                # 嚴格檢查台股 ±10.5% 漲跌幅防呆，避免異常值污染股價
-                if base_p > 0 and not (base_p * 0.895 <= last_trade <= base_p * 1.105):
+                if yesterday_close > 0 and not (yesterday_close * 0.895 <= last_trade <= yesterday_close * 1.105):
                     continue
 
                 open_p = safe_float(item.get("o"), last_trade)
                 high_p = safe_float(item.get("h"), last_trade)
                 low_p = safe_float(item.get("l"), last_trade)
                 vol_lots = safe_int(item.get("v"))
-                ref_prev = yesterday_close if (yesterday_close > 0 and base_p * 0.895 <= yesterday_close <= base_p * 1.105) else base_p
-                pct = round(((last_trade - ref_prev) / ref_prev) * 100, 2) if ref_prev > 0 else st["pct"]
+                pct = round(((last_trade - yesterday_close) / yesterday_close) * 100, 2) if yesterday_close > 0 else st["pct"]
 
-                if abs(pct) <= 10.5:
-                    st["price"] = last_trade
-                    st["pct"] = pct
-                    st["_todayBar"] = {
-                        "d": today_mmdd,
-                        "o": open_p if open_p > 0 else last_trade,
-                        "h": max(high_p, last_trade),
-                        "l": min(low_p, last_trade) if low_p > 0 else last_trade,
-                        "c": last_trade,
-                        "v": vol_lots
-                    }
-                    updated_cnt += 1
-        except Exception as e:
-            print(f"[警告] 盤中即時批次 {i} 讀取略過: {e}")
-        time.sleep(0.35)
+                st["price"] = round(last_trade, 2)
+                st["pct"] = pct
+                st["_todayBar"] = {
+                    "d": today_mmdd,
+                    "o": round(open_p if open_p > 0 else last_trade, 2),
+                    "h": round(max(high_p, last_trade), 2),
+                    "l": round(min(low_p, last_trade) if low_p > 0 else last_trade, 2),
+                    "c": round(last_trade, 2),
+                    "v": vol_lots
+                }
+                st["_liveUpdated"] = True
+                updated_cnt += 1
+        except Exception:
+            pass
+        time.sleep(0.25)
 
-    print(f"=== 證交所 MIS 盤中即時報價同步完成：共更新 {updated_cnt} 檔當下真實成交價 ===")
+    print(f"=== 證交所 MIS 補齊盤中即時報價：額外更新 {updated_cnt} 檔 ===")
     return updated_cnt
 
 
 def backfill_all_market_50d_by_date(stocks_map, now_tw):
-    """
-    全市場 1,867 檔 50 日真實 K 線高速回補引擎：
-    改用 FinMind「按交易日一次抓取全市場所有上市櫃股票」API（僅需約 52 次日期請求，30 秒內一次補齊全市場 1,867 檔 × 50 日真實 OHLCV），
-    徹底解決逐檔抓取 1,867 次會超時的問題！
-    """
+    """全市場 1,867 檔 50 日真實 K 線高速回補引擎"""
     candidate_dates = []
     for days_back in range(78, -1, -1):
         dt = now_tw - timedelta(days=days_back)
@@ -219,7 +286,6 @@ def backfill_all_market_50d_by_date(stocks_map, now_tw):
             if bars_list:
                 prev_c = bars_list[-1]["c"]
                 if prev_c > 0 and not (prev_c * 0.85 <= c <= prev_c * 1.15):
-                    # 若遇除權息或分割跳空，重置起點以維持價格連貫
                     bars_list.clear()
             bars_list.append({
                 "d": mmdd,
@@ -252,9 +318,7 @@ def main():
     prev_map = load_previous_data()
     stocks_map = {}
 
-    # ---------------------------------------------------------
-    # 1. 抓取上市 (TWSE) 全市場名單、基本估值與最近盤後基準
-    # ---------------------------------------------------------
+    # 1. 抓取上市 (TWSE) 全市場名單與基本估值
     twse_day = fetch_json(TWSE_DAY_ALL_URL) or []
     twse_val = fetch_json(TWSE_BWIBBU_URL) or []
     val_map_twse = {str(item.get("Code", "")).strip(): item for item in twse_val}
@@ -317,9 +381,7 @@ def main():
                         f"外資{foreign_lots:+} / 投信{trust_lots:+} / 自營{dealer_lots:+}"
                     )
 
-    # ---------------------------------------------------------
-    # 2. 抓取上櫃 (TPEx) 全市場名單、估值與最近盤後基準
-    # ---------------------------------------------------------
+    # 2. 抓取上櫃 (TPEx) 全市場名單與估值
     time.sleep(1)
     tpex_quotes = fetch_json(TPEX_QUOTES_URL) or []
     tpex_pe = fetch_json(TPEX_PERATIO_URL) or []
@@ -381,15 +443,13 @@ def main():
             "_todayBar": {"d": bar_date, "o": open_p, "h": high_p, "l": low_p, "c": close_p, "v": vol_lots}
         }
 
-    # ---------------------------------------------------------
-    # 3. 盤中時段 (09:00~13:35) 覆寫為證交所 MIS 當下即時成交價
-    # ---------------------------------------------------------
+    # 3. 盤中時段 (09:00~13:35) 雙通道覆寫為今日當下即時成交價（Yahoo 批量 ＋ 證交所 MIS）
     if intraday_mode and len(stocks_map) > 500:
-        fetch_realtime_mis_prices(stocks_map, now_tw)
+        y_cnt = fetch_realtime_yahoo_prices(stocks_map, now_tw)
+        m_cnt = fetch_realtime_mis_prices(stocks_map, now_tw)
+        print(f"=== 盤中雙通道即時更新總計：{y_cnt + m_cnt} / {len(stocks_map)} 檔 ===")
 
-    # ---------------------------------------------------------
     # 4. 全市場 1,867 檔滾動更新 50 日真實 K 線並輸出 JSON
-    # ---------------------------------------------------------
     stocks_needing_backfill = sum(
         1 for code in stocks_map
         if len(prev_map.get(code, {}).get("klines50d") or []) < 20
@@ -403,6 +463,7 @@ def main():
     for code, st in sorted(stocks_map.items()):
         old_bars = list(prev_map.get(code, {}).get("klines50d") or [])
         today_bar = st.pop("_todayBar")
+        st.pop("_liveUpdated", None)
 
         if len(old_bars) < 20 and bulk_backfill_map.get(code):
             old_bars = bulk_backfill_map[code]
