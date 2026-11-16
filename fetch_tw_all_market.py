@@ -8,12 +8,7 @@ from datetime import datetime, timezone, timedelta
 TW_TZ = timezone(timedelta(hours=8))
 
 TWSE_DAY_ALL_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
-TWSE_BWIBBU_URL = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
-TWSE_T86_URL = "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&selectType=ALLBUT0999"
-
 TPEX_QUOTES_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
-TPEX_PERATIO_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis"
-TPEX_3INST_URL = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading"
 
 YAHOO_CHART_BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart"
 FINMIND_DATA_URL = "https://api.finmindtrade.com/api/v4/data"
@@ -54,36 +49,38 @@ def is_intraday_session(now_tw):
     hhmm = now_tw.hour * 100 + now_tw.minute
     return 900 <= hhmm <= 1335
 
-async def fetch_single_chart_async(client, code, market, today_mmdd):
+async def fetch_single_chart_async(client, semaphore, code, market, today_mmdd):
     suffix = ".TW" if market == "TWSE" else ".TWO"
     url = f"{YAHOO_CHART_BASE_URL}/{code}{suffix}?interval=1d&range=2d"
-    try:
-        resp = await client.get(url, headers=HEADERS, timeout=4.0)
-        if resp.status_code != 200: return None
-        res_list = resp.json().get("chart", {}).get("result") or []
-        if not res_list: return None
-        meta = res_list[0].get("meta", {})
-        live_p = safe_float(meta.get("regularMarketPrice"))
-        if live_p <= 0: return None
-        prev_c = safe_float(meta.get("chartPreviousClose"), safe_float(meta.get("previousClose"), live_p))
-        open_p = safe_float(meta.get("regularMarketOpen"), live_p)
-        high_p = safe_float(meta.get("regularMarketDayHigh"), live_p)
-        low_p = safe_float(meta.get("regularMarketDayLow"), live_p)
-        vol_lots = max(1, round(safe_int(meta.get("regularMarketVolume")) / 1000))
-        pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else 0.0
-        return code, live_p, pct, open_p, high_p, low_p, vol_lots
-    except Exception:
-        return None
+    async with semaphore:
+        try:
+            resp = await client.get(url, headers=HEADERS, timeout=3.0)
+            if resp.status_code != 200: return None
+            res_list = resp.json().get("chart", {}).get("result") or []
+            if not res_list: return None
+            meta = res_list[0].get("meta", {})
+            live_p = safe_float(meta.get("regularMarketPrice"))
+            if live_p <= 0: return None
+            prev_c = safe_float(meta.get("chartPreviousClose"), safe_float(meta.get("previousClose"), live_p))
+            open_p = safe_float(meta.get("regularMarketOpen"), live_p)
+            high_p = safe_float(meta.get("regularMarketDayHigh"), live_p)
+            low_p = safe_float(meta.get("regularMarketDayLow"), live_p)
+            vol_lots = max(1, round(safe_int(meta.get("regularMarketVolume")) / 1000))
+            pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else 0.0
+            return code, live_p, pct, open_p, high_p, low_p, vol_lots
+        except Exception:
+            return None
 
 async def fetch_all_1867_current_prices_async(stocks_map, now_tw):
     today_str = now_tw.strftime("%Y-%m-%d")
     today_mmdd = now_tw.strftime("%m/%d")
     v8_updated = 0
+    semaphore = asyncio.Semaphore(15) # 嚴格控制同時最高 15 個並發，避免觸發 Yahoo 封鎖限流
 
-    async with httpx.AsyncClient(limits=httpx.Limits(max_keepalive_connections=100, max_connections=200)) as client:
-        # 1. 先嘗試透過 FinMind 批次取得當日快照
+    async with httpx.AsyncClient(limits=httpx.Limits(max_keepalive_connections=50, max_connections=100)) as client:
+        # 1. 優先透過 FinMind 批次取得當日快照
         try:
-            r = await client.get(FINMIND_DATA_URL, params={"dataset": "TaiwanStockPrice", "date": today_str}, headers=HEADERS, timeout=8.0)
+            r = await client.get(FINMIND_DATA_URL, params={"dataset": "TaiwanStockPrice", "date": today_str}, headers=HEADERS, timeout=6.0)
             if r.status_code == 200:
                 rows = r.json().get("data") or []
                 for row in rows:
@@ -107,9 +104,9 @@ async def fetch_all_1867_current_prices_async(stocks_map, now_tw):
         except Exception:
             pass
 
-        # 2. 針對未更新的標的以 async 異步並發極速補齊
+        # 2. 針對未更新標的以安全號誌限速非同步補齊
         tasks = [
-            fetch_single_chart_async(client, code, st["market"], today_mmdd)
+            fetch_single_chart_async(client, semaphore, code, st["market"], today_mmdd)
             for code, st in stocks_map.items() if not st.get("_liveUpdated")
         ]
         results = await asyncio.gather(*tasks)
@@ -122,7 +119,7 @@ async def fetch_all_1867_current_prices_async(stocks_map, now_tw):
                 st["_todayBar"] = {"d": today_mmdd, "o": round(open_p or live_p, 2), "h": round(max(high_p, live_p), 2), "l": round(min(low_p, live_p) or live_p, 2), "c": round(live_p, 2), "v": vol_lots}
                 v8_updated += 1
 
-    print(f"=== [極速異步版] 全市場即時成交價更新完成：共同步 {v8_updated} 檔 ===")
+    print(f"=== [限速非同步版] 全市場即時成交價更新完成：共同步 {v8_updated} 檔 ===")
     return v8_updated
 
 def main():
@@ -130,13 +127,13 @@ def main():
     today_label = now_tw.strftime("%Y/%m/%d")
     today_mmdd = now_tw.strftime("%m/%d")
     intraday_mode = is_intraday_session(now_tw)
-    print(f"=== [極速啟動] 台股全市場 1,867 家非同步更新 ({today_label} {now_tw.strftime('%H:%M:%S')}) ===")
+    print(f"=== [極速啟動] 台股全市場 1,867 家限速非同步更新 ({today_label} {now_tw.strftime('%H:%M:%S')}) ===")
 
     prev_map = load_previous_data()
     stocks_map = {}
 
     try:
-        r_twse = requests.get(TWSE_DAY_ALL_URL, headers=HEADERS, timeout=10)
+        r_twse = requests.get(TWSE_DAY_ALL_URL, headers=HEADERS, timeout=8)
         if r_twse.status_code == 200:
             for row in r_twse.json():
                 code = str(row.get("Code", "")).strip()
@@ -156,7 +153,7 @@ def main():
         pass
 
     try:
-        r_tpex = requests.get(TPEX_QUOTES_URL, headers=HEADERS, timeout=10)
+        r_tpex = requests.get(TPEX_QUOTES_URL, headers=HEADERS, timeout=8)
         if r_tpex.status_code == 200:
             for row in r_tpex.json():
                 code = str(row.get("SecuritiesCompanyCode", "")).strip()
@@ -179,7 +176,6 @@ def main():
         if code not in stocks_map:
             stocks_map[code] = old_st
 
-    # 執行非同步極速抓價
     live_updated_total = asyncio.run(fetch_all_1867_current_prices_async(stocks_map, now_tw))
 
     final_list = []
@@ -203,7 +199,7 @@ def main():
     if len(final_list) > 500:
         payload = {
             "updated_at": now_tw.strftime("%Y/%m/%d %H:%M"),
-            "trading_date": f"{today_label} (極速非同步)",
+            "trading_date": f"{today_label} (限速非同步)",
             "is_intraday": intraday_mode,
             "live_updated_count": live_updated_total,
             "total_count": len(final_list),
