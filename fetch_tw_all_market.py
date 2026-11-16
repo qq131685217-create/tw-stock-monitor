@@ -213,54 +213,103 @@ def fetch_all_1867_current_prices(stocks_map, now_tw):
                 pass
             time.sleep(0.2)
 
-    print(f"=== 全市場 {len(stocks_map)} 檔當下即時股價同步完成：Yahoo {yahoo_updated} 檔 ＋ 證交所MIS {mis_updated} 檔 ===")
-    return yahoo_updated + mis_updated
+    # --- 通道三：Yahoo Finance v8 Chart 並發即時現價補漏（防 v7 Crumb 401 驗證阻擋） ---
+    chart_updated = 0
+    still_missing = [code for code, st in stocks_map.items() if not st.get("_liveUpdated")]
+    if still_missing:
+        def fetch_single_v8_chart(code):
+            st = stocks_map[code]
+            suffix = ".TW" if st["market"] == "TWSE" else ".TWO"
+            url = f"{YAHOO_CHART_BASE_URL}/{code}{suffix}?interval=1d&range=2d"
+            try:
+                r = requests.get(url, headers=y_headers, timeout=10)
+                if r.status_code != 200:
+                    return None
+                res_list = r.json().get("chart", {}).get("result") or []
+                if not res_list:
+                    return None
+                meta = res_list[0].get("meta", {})
+                live_p = safe_float(meta.get("regularMarketPrice"))
+                prev_c = safe_float(meta.get("chartPreviousClose"), st["price"])
+                if live_p <= 0:
+                    return None
+                if prev_c > 0 and not (prev_c * 0.895 <= live_p <= prev_c * 1.105):
+                    return None
+                open_p = safe_float(meta.get("regularMarketOpen"), live_p)
+                high_p = safe_float(meta.get("regularMarketDayHigh"), live_p)
+                low_p = safe_float(meta.get("regularMarketDayLow"), live_p)
+                vol_lots = max(1, round(safe_int(meta.get("regularMarketVolume")) / 1000))
+                pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else st["pct"]
+                return code, live_p, pct, open_p, high_p, low_p, vol_lots
+            except Exception:
+                return None
+
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            for res in ex.map(fetch_single_v8_chart, still_missing):
+                if res:
+                    code, live_p, pct, open_p, high_p, low_p, vol_lots = res
+                    st = stocks_map[code]
+                    st["price"] = round(live_p, 2)
+                    st["pct"] = pct
+                    st["_todayBar"] = {
+                        "d": today_mmdd,
+                        "o": round(open_p if open_p > 0 else live_p, 2),
+                        "h": round(max(high_p, live_p), 2),
+                        "l": round(min(low_p, live_p) if low_p > 0 else live_p, 2),
+                        "c": round(live_p, 2),
+                        "v": vol_lots
+                    }
+                    st["_liveUpdated"] = True
+                    chart_updated += 1
+
+    print(f"=== 全市場 {len(stocks_map)} 檔當下即時股價同步完成：Yahoo-v7 {yahoo_updated} ＋ 證交所MIS {mis_updated} ＋ Yahoo-v8 {chart_updated} 檔 ===")
+    return yahoo_updated + mis_updated + chart_updated
 
 
 def backfill_all_market_50d_by_date(stocks_map, now_tw):
-    """全市場 1,867 檔 50 日真實 K 線高速回補引擎"""
-    candidate_dates = []
-    for days_back in range(78, -1, -1):
-        dt = now_tw - timedelta(days=days_back)
-        if dt.weekday() < 5:
-            candidate_dates.append(dt.strftime("%Y-%m-%d"))
-
-    print(f"=== 啟動全市場 {len(stocks_map)} 檔 50 日真實 K 線批量回補（掃描近 {len(candidate_dates)} 個平日） ===")
+    """透過 FinMind 全市場按日批量查詢，一次補齊全市場 1,867 檔近 50 個交易日真實 OHLCV K 線"""
     per_stock_bars = {code: [] for code in stocks_map}
+    finmind_url = "https://api.finmindtrade.com/api/v4/data"
+    trading_dates = []
+    for offset in range(78, -1, -1):
+        d = now_tw - timedelta(days=offset)
+        if d.weekday() < 5:
+            trading_dates.append(d.strftime("%Y-%m-%d"))
 
-    def fetch_single_market_date(date_str):
-        url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&start_date={date_str}&end_date={date_str}"
+    def fetch_one_day(date_str):
         try:
-            resp = requests.get(url, headers=HEADERS, timeout=18)
-            if resp.status_code != 200:
-                return date_str, []
-            js = resp.json()
-            rows = js.get("data") if isinstance(js, dict) else []
-            return date_str, rows if isinstance(rows, list) else []
+            r = requests.get(
+                finmind_url,
+                params={"dataset": "TaiwanStockPrice", "date": date_str},
+                headers={"User-Agent": HEADERS["User-Agent"]},
+                timeout=18
+            )
+            if r.status_code == 200:
+                return date_str, r.json().get("data") or []
         except Exception:
-            return date_str, []
+            pass
+        return date_str, []
 
-    daily_results = {}
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {executor.submit(fetch_single_market_date, d): d for d in candidate_dates}
-        for fut in as_completed(futures):
-            d_str, rows = fut.result()
-            if rows:
-                daily_results[d_str] = rows
+    day_results = []
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for res in ex.map(fetch_one_day, trading_dates):
+            if res[1]:
+                day_results.append(res)
 
-    for d_str in sorted(daily_results.keys()):
-        mmdd = d_str[5:].replace("-", "/")
-        for r in daily_results[d_str]:
-            code = str(r.get("stock_id", "")).strip()
+    day_results.sort(key=lambda x: x[0])
+    for date_str, rows in day_results:
+        mmdd = date_str[5:].replace("-", "/")
+        for row in rows:
+            code = str(row.get("stock_id", "")).strip()
             if code not in per_stock_bars:
                 continue
-            c = safe_float(r.get("close"))
+            c = safe_float(row.get("close"))
             if c <= 0:
                 continue
-            o = safe_float(r.get("open"), c)
-            h = safe_float(r.get("max"), max(o, c))
-            l = safe_float(r.get("min"), min(o, c))
-            v = max(1, round(safe_int(r.get("Trading_Volume")) / 1000))
+            o = safe_float(row.get("open"), c)
+            h = safe_float(row.get("max"), max(o, c))
+            l = safe_float(row.get("min"), min(o, c))
+            v = max(1, round(safe_int(row.get("Trading_Volume")) / 1000))
             bars_list = per_stock_bars[code]
             if bars_list:
                 prev_c = bars_list[-1]["c"]
