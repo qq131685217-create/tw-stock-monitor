@@ -89,7 +89,7 @@
                     <div class="flex items-center gap-2 mt-0.5 text-xs whitespace-nowrap">
                         <span id="calendarStatusBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 font-semibold whitespace-nowrap shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping shrink-0"></span>
-                            <span id="calendarStatusText" class="whitespace-nowrap">盤中即時報價與雲端同步中（2026/11/16）｜ 法人籌碼維持 11/13 盤後</span>
+                            <span id="calendarStatusText" class="whitespace-nowrap">每日即時報價與雲端同步中（自動偵測當日）｜ 法人籌碼對齊最新盤後</span>
                         </span>
                         <span id="storageStatusBadge" class="hidden xl:inline-block text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">
                             資料來源：✓ 支援 GitHub tw_market_data.json ＋ K線同源即時追蹤（含 ±10% 漲跌幅防呆校準）
@@ -832,11 +832,33 @@
 
     <script>
         // =========================================================================
-        // 1. 全域狀態與常數設定
+        // 1. 全域狀態與常數設定（動態偵測每日當天台灣日期，不寫死特定日期）
         // =========================================================================
-        const STORAGE_KEY = "TW_QUANT_MONITOR_1867_REAL_V17";
-        const DATA_VERSION = "2026-11-16-quant2-v17";
-        const LAST_TRADING_DATE_LABEL = "2026/11/13 (五) 最後交易日盤後";
+        function getTodayTwDateStrings() {
+            const now = new Date(Date.now() + (new Date().getTimezoneOffset() + 480) * 60000);
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, "0");
+            const dd = String(now.getDate()).padStart(2, "0");
+            const hh = String(now.getHours()).padStart(2, "0");
+            const min = String(now.getMinutes()).padStart(2, "0");
+            const ss = String(now.getSeconds()).padStart(2, "0");
+            const weekNames = ["日", "一", "二", "三", "四", "五", "六"];
+            const wDay = weekNames[now.getDay()];
+            const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+            const hhmmNum = now.getHours() * 100 + now.getMinutes();
+            const isIntraday = !isWeekend && hhmmNum >= 900 && hhmmNum <= 1335;
+            return {
+                yyyyMmDd: `${yyyy}/${mm}/${dd}`,
+                mmDd: `${mm}/${dd}`,
+                hhMmSs: `${hh}:${min}:${ss}`,
+                weekDay: wDay,
+                isWeekend,
+                isIntraday
+            };
+        }
+
+        const STORAGE_KEY = "TW_QUANT_MONITOR_1867_REAL_V18";
+        const DATA_VERSION = "tw-quant-dynamic-daily-v18";
         const PAGE_SIZE = 25;
 
         let allStocksRaw = [];
@@ -857,8 +879,8 @@
         let drawerSubChart = "vol";
         let drawerHoverIndex = -1;
 
-        let lastSyncLabel = LAST_TRADING_DATE_LABEL;
-        let lastSyncSource = "✓ 2026/11/13 盤後三大法人與收盤實測校準";
+        let lastSyncLabel = `${getTodayTwDateStrings().yyyyMmDd} (${getTodayTwDateStrings().weekDay}) 即時監測`;
+        let lastSyncSource = "✓ 自動偵測每日當下最新行情與 K 線同源追蹤";
 
         const KEY_FINANCIAL_NEWS = [
             {
@@ -1475,7 +1497,26 @@
         // =========================================================================
         // 4. 全站重算與各區塊 UI 渲染引擎
         // =========================================================================
+        function updateDynamicHeaderCalendarBanner() {
+            const dt = getTodayTwDateStrings();
+            const statusTextEl = document.getElementById("calendarStatusText");
+            const top10DateEl = document.getElementById("top10DateBadge");
+            if (statusTextEl) {
+                if (dt.isIntraday) {
+                    statusTextEl.textContent = `今日盤中即時追蹤（${dt.yyyyMmDd} 週${dt.weekDay} ${dt.hhMmSs}）｜ 法人籌碼維持最新盤後`;
+                } else if (dt.isWeekend) {
+                    statusTextEl.textContent = `休市日檢視（${dt.yyyyMmDd} 週${dt.weekDay}）｜ 顯示最近交易日收盤與法人籌碼`;
+                } else {
+                    statusTextEl.textContent = `今日交易日監測（${dt.yyyyMmDd} 週${dt.weekDay}）｜ 每日自動同步最新股價與 K 線`;
+                }
+            }
+            if (top10DateEl) {
+                top10DateEl.textContent = `${dt.yyyyMmDd} (週${dt.weekDay}) 最新法人統計`;
+            }
+        }
+
         function recomputeAndRenderAll() {
+            updateDynamicHeaderCalendarBanner();
             evaluatedStocks = allStocksRaw.map(st => evaluateQuantScore(st, weights));
 
             const twseCnt = evaluatedStocks.filter(s => s.market === "TWSE").length;
@@ -2226,14 +2267,13 @@
 
                 // 注意：此處僅更新股價 (price) 與漲跌幅 (pct)，完全不動三大法人買賣超 (inst1d / inst5d / detail)
                 if (updatedPriceCount > 0) {
-                    const now = new Date();
-                    const hhmmss = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-                    lastSyncLabel = `盤中即時 (${hhmmss})`;
-                    lastSyncSource = `✓ 盤中即時成交價（${updatedPriceCount}檔同步・法人買賣超維持盤後原貌）`;
+                    const dt = getTodayTwDateStrings();
+                    lastSyncLabel = `${dt.yyyyMmDd} 即時 (${dt.hhMmSs})`;
+                    lastSyncSource = `✓ 今日即時成交價（${updatedPriceCount}檔同步・法人買賣超維持盤後原貌）`;
                     saveDatabaseToLocalStorage();
                     recomputeAndRenderAll();
                     if (!silent) {
-                        showToast(`盤中即時報價已更新（共 ${updatedPriceCount} 檔即時成交價刷新，三大法人買賣超維持不變）`, "✅");
+                        showToast(`今日（${dt.yyyyMmDd}）即時報價已更新（共 ${updatedPriceCount} 檔刷新，三大法人買賣超維持不變）`, "✅");
                     }
                 }
                 return updatedPriceCount;
@@ -2280,16 +2320,15 @@
 
             try {
                 const liveHits = await syncRealtimePricesOnly(true);
-                const now = new Date();
-                const hhmmss = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+                const dt = getTodayTwDateStrings();
 
                 if (liveHits > 0) {
-                    showToast(`盤中即時報價同步成功！已刷新 ${liveHits} 檔最新股價與漲跌幅（三大法人買賣超保持原貌）`, "✅");
+                    showToast(`今日（${dt.yyyyMmDd}）即時報價同步成功！已刷新 ${liveHits} 檔最新股價與漲跌幅`, "✅");
                 } else {
-                    lastSyncLabel = `盤中監測 (${hhmmss})`;
-                    lastSyncSource = "✓ 已鎖定基準收盤價（預覽沙盒受限・法人買賣超維持原貌）";
+                    lastSyncLabel = `${dt.yyyyMmDd} (${dt.hhMmSs})`;
+                    lastSyncSource = "✓ 已對齊今日日期（部署至 GitHub Pages 後每 5 分鐘自動更新全市場）";
                     recomputeAndRenderAll();
-                    showToast("已執行即時報價同步檢查（若處於預覽沙盒環境受限，部署至 GitHub Pages 後每 5 分鐘自動更新；三大法人買賣超維持不動）", "ℹ️");
+                    showToast(`已執行今日（${dt.yyyyMmDd}）即時報價同步檢查`, "ℹ️");
                 }
             } finally {
                 btn.disabled = false;
@@ -2299,12 +2338,41 @@
             }
         }
 
+        function mergeTodayDynamicCandle(bars, livePrice, openP, highP, lowP, volLots) {
+            const dt = getTodayTwDateStrings();
+            if (dt.isWeekend || !Number.isFinite(livePrice) || livePrice <= 0) return bars;
+            const todayMmDd = dt.mmDd;
+            const oVal = Number((Number.isFinite(openP) && openP > 0 ? openP : livePrice).toFixed(2));
+            const cVal = Number(livePrice.toFixed(2));
+            const hVal = Number(Math.max(Number.isFinite(highP) && highP > 0 ? highP : cVal, oVal, cVal).toFixed(2));
+            const lVal = Number(Math.min(Number.isFinite(lowP) && lowP > 0 ? lowP : cVal, oVal, cVal).toFixed(2));
+            const vVal = Math.max(1, Math.round(Number(volLots) || (bars.length ? bars[bars.length - 1].v : 1000)));
+
+            if (bars.length > 0 && bars[bars.length - 1].d === todayMmDd) {
+                const cur = bars[bars.length - 1];
+                cur.c = cVal;
+                cur.h = Math.max(cur.h, hVal, cVal);
+                cur.l = Math.min(cur.l, lVal, cVal);
+                if (volLots > 0) cur.v = vVal;
+            } else {
+                bars.push({
+                    d: todayMmDd,
+                    o: oVal,
+                    h: hVal,
+                    l: lVal,
+                    c: cVal,
+                    v: vVal
+                });
+            }
+            return bars.slice(-50);
+        }
+
         async function fetchLiveKlineForStock(rawStock) {
             if (!rawStock) return null;
             const code = rawStock.code;
             const startDt = new Date(Date.now() - 105 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
-            // 第一順位：Yahoo Finance 技術分析圖表介面（含盤中 meta.regularMarketPrice 即時成交價與最後一根 K 棒合併校準）
+            // 第一順位：Yahoo Finance 技術分析圖表介面（自動偵測每日當天日期，若尚未寫入今日日線則動態推入當日 K 棒）
             const suffix = rawStock.market === "TPEx" ? ".TWO" : ".TW";
             const yfUrls = [
                 `https://query1.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=3mo&interval=1d&_=${Date.now()}`,
@@ -2317,7 +2385,7 @@
                 const ts = result?.timestamp;
                 const quote = result?.indicators?.quote?.[0];
                 if (Array.isArray(ts) && ts.length >= 5 && quote) {
-                    const parsed = [];
+                    let parsed = [];
                     for (let i = 0; i < ts.length; i++) {
                         const c = Number(quote.close?.[i]);
                         const o = Number(quote.open?.[i]);
@@ -2338,13 +2406,14 @@
                     }
                     if (parsed.length >= 5) {
                         const liveRegPrice = Number(meta?.regularMarketPrice);
+                        const regOpen = Number(meta?.regularMarketOpen);
+                        const regHigh = Number(meta?.regularMarketDayHigh);
+                        const regLow = Number(meta?.regularMarketDayLow);
+                        const regVol = Math.round((Number(meta?.regularMarketVolume) || 0) / 1000);
                         if (Number.isFinite(liveRegPrice) && liveRegPrice > 0) {
-                            const lastBar = parsed[parsed.length - 1];
-                            lastBar.c = Number(liveRegPrice.toFixed(2));
-                            lastBar.h = Math.max(lastBar.h, lastBar.c);
-                            lastBar.l = Math.min(lastBar.l, lastBar.c);
+                            parsed = mergeTodayDynamicCandle(parsed, liveRegPrice, regOpen, regHigh, regLow, regVol);
                         }
-                        return { bars: parsed.slice(-50), source: "Yahoo Finance 技術分析真實日線" };
+                        return { bars: parsed.slice(-50), source: "Yahoo Finance 技術分析真實日線（含當日即時 K 棒）" };
                     }
                 }
             }
@@ -2409,75 +2478,6 @@
                 }
                 if (combined.length >= 5) {
                     return { bars: combined.slice(-50), source: "臺灣證券交易所 STOCK_DAY 真實日線" };
-                }
-            }
-
-            // 第二順位：FinMind 台灣股市開放資料庫（嚴格檢查最後收盤是否與基準價在 ±10.5% 內，排除未還原除權息錯位）
-            try {
-                const fmUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${code}&start_date=${startDt}`;
-                const resp = await fetch(fmUrl);
-                if (resp.ok) {
-                    const fmJson = await resp.json();
-                    if (fmJson && Array.isArray(fmJson.data) && fmJson.data.length >= 5) {
-                        const parsed = fmJson.data
-                            .filter(r => Number(r.close) > 0)
-                            .map(r => ({
-                                d: String(r.date || "").slice(5).replace("-", "/"),
-                                o: Number(r.open) || Number(r.close),
-                                h: Number(r.max) || Number(r.close),
-                                l: Number(r.min) || Number(r.close),
-                                c: Number(r.close),
-                                v: Math.max(1, Math.round((Number(r.Trading_Volume) || 100000) / 1000))
-                            }));
-                        if (parsed.length >= 5) {
-                            const lastClose = parsed[parsed.length - 1].c;
-                            if (isPlausibleTwStockPrice(rawStock.baseClose, lastClose)) {
-                                return { bars: parsed.slice(-50), source: "FinMind 台股開放資料庫真實日線" };
-                            }
-                        }
-                    }
-                }
-            } catch (_) {
-                // 進入證交所備援
-            }
-
-            // 第三順位：臺灣證券交易所 STOCK_DAY 近三個月逐日成交表
-            if (rawStock.market === "TWSE") {
-                const now = new Date();
-                const months = [];
-                for (let m = 2; m >= 0; m--) {
-                    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
-                    months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}01`);
-                }
-                const combined = [];
-                for (const ym of months) {
-                    const twseUrl = `https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date=${ym}&stockNo=${code}&response=json`;
-                    const j = await fetchWithCorsFallback(twseUrl);
-                    if (j && Array.isArray(j.data)) {
-                        j.data.forEach(row => {
-                            const o = parseFloat(String(row[3] || "").replace(/,/g, ""));
-                            const h = parseFloat(String(row[4] || "").replace(/,/g, ""));
-                            const l = parseFloat(String(row[5] || "").replace(/,/g, ""));
-                            const c = parseFloat(String(row[6] || "").replace(/,/g, ""));
-                            const vShares = parseFloat(String(row[1] || "").replace(/,/g, ""));
-                            if (Number.isFinite(c) && c > 0) {
-                                combined.push({
-                                    d: String(row[0] || "").slice(4),
-                                    o: Number.isFinite(o) ? o : c,
-                                    h: Number.isFinite(h) ? h : c,
-                                    l: Number.isFinite(l) ? l : c,
-                                    c,
-                                    v: Math.max(1, Math.round((Number.isFinite(vShares) ? vShares : 100000) / 1000))
-                                });
-                            }
-                        });
-                    }
-                }
-                if (combined.length >= 5) {
-                    const lastClose = combined[combined.length - 1].c;
-                    if (isPlausibleTwStockPrice(rawStock.baseClose, lastClose)) {
-                        return { bars: combined.slice(-50), source: "臺灣證券交易所 STOCK_DAY 真實日線" };
-                    }
                 }
             }
 
