@@ -85,10 +85,10 @@
                     <div class="flex items-center gap-2 mt-0.5 text-xs whitespace-nowrap">
                         <span id="calendarStatusBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-semibold whitespace-nowrap shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0"></span>
-                            <span id="calendarStatusText" class="whitespace-nowrap">自動追蹤 GitHub 雲端即時與盤後報價（tw_market_data.json）</span>
+                            <span id="calendarStatusText" class="whitespace-nowrap">K 線同源追蹤引擎（全站價格與最新真實 K 棒即時同步）</span>
                         </span>
                         <span id="storageStatusBadge" class="hidden xl:inline-block text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">
-                            資料來源：等待同步 GitHub 雲端資料庫
+                            資料來源：正在同步最新真實 K 線與行情
                         </span>
                     </div>
                 </div>
@@ -100,7 +100,7 @@
                     <svg id="iconLiveSync" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span id="btnLiveSyncLabel" class="whitespace-nowrap">🔄 同步最新即時／盤後報價</span>
+                    <span id="btnLiveSyncLabel" class="whitespace-nowrap">🔄 追蹤最新 K 線與即時股價</span>
                 </button>
 
                 <button type="button" onclick="openManualImportModal()"
@@ -111,7 +111,7 @@
 
                 <button type="button" onclick="resetToDefaultCalibratedData()"
                     class="hidden sm:inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                    title="清除本機自訂修改並重新載入雲端最新數據">
+                    title="清除本機自訂修改並重新載入最新數據">
                     <span>清除快取重載</span>
                 </button>
             </div>
@@ -119,7 +119,7 @@
 
         <div id="liveSyncProgressBar" class="hidden max-w-[1600px] mx-auto mt-2.5 pt-2 border-t border-slate-100">
             <div class="flex items-center justify-between text-xs text-blue-700 font-semibold mb-1">
-                <span id="liveSyncProgressText">正在讀取 GitHub 雲端即時與盤後資料庫 (tw_market_data.json)...</span>
+                <span id="liveSyncProgressText">正在透過真實 K 線追蹤引擎同步最新股價...</span>
                 <span id="liveSyncProgressPct" class="font-mono-num">同步中...</span>
             </div>
             <div class="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
@@ -296,11 +296,11 @@
                 </div>
 
                 <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs">
-                    <div class="text-xs font-semibold text-slate-500">報價同步狀態與基準時間</div>
+                    <div class="text-xs font-semibold text-slate-500">K 線同源追蹤基準時間</div>
                     <div class="mt-1.5 flex items-baseline gap-2">
-                        <span id="kpiSyncTimestamp" class="text-base sm:text-lg font-extrabold font-mono-num text-slate-900">等待同步即時報價</span>
+                        <span id="kpiSyncTimestamp" class="text-base sm:text-lg font-extrabold font-mono-num text-slate-900">同步 K 線報價中</span>
                     </div>
-                    <div id="kpiSyncSubtext" class="mt-1 text-[11px] text-blue-600 font-semibold truncate">讀取 tw_market_data.json 中...</div>
+                    <div id="kpiSyncSubtext" class="mt-1 text-[11px] text-blue-600 font-semibold truncate">由最新真實 K 棒即時計算全站股價</div>
                 </div>
             </section>
 
@@ -317,7 +317,7 @@
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="syncLiveIndex3DayIntraday(false)"
                             class="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold cursor-pointer whitespace-nowrap">
-                            🔄 刷新近3日走勢
+                            🔄 追蹤近3日走勢
                         </button>
                         <button type="button" onclick="openManualIndexModal()"
                             class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer whitespace-nowrap">
@@ -521,9 +521,9 @@
                     <canvas id="drawerKlineCanvas" class="w-full h-full block cursor-crosshair"></canvas>
                     <div id="drawerKlineEmptyState" class="hidden absolute inset-0 bg-slate-50/95 flex flex-col items-center justify-center p-5 text-center">
                         <div class="text-sm font-extrabold text-slate-800 mb-1">尚未取得該股真實歷史 K 線數據（絕不畫假線）</div>
-                        <p class="text-xs text-slate-500 max-w-md mb-3">部署至 GitHub Pages 後每次排程都會自動累積真實日線，您也可以立即貼上真實 OHLC 數據。</p>
+                        <p class="text-xs text-slate-500 max-w-md mb-3">正在嘗試連網追蹤真實 K 線，您也可以點擊下方按鈕立即重抓或貼上 OHLC 數據。</p>
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="retryFetchDrawerKline()" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer">🔄 重新連網抓取</button>
+                            <button type="button" onclick="retryFetchDrawerKline()" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer">🔄 立即追蹤真實 K 線</button>
                             <button type="button" onclick="openManualKlineModal()" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-bold cursor-pointer">📋 手動貼上真實日線 OHLC</button>
                         </div>
                     </div>
@@ -625,8 +625,8 @@
         // =========================================================================
         // 1. 全域狀態與常數定義
         // =========================================================================
-        const STORAGE_KEY = "TW_QUANT_UNIVERSE_V16_REALTIME_TRACK";
-        const INDEX_STORAGE_KEY = "TW_INDEX_3DAY_INTRADAY_V5";
+        const STORAGE_KEY = "TW_QUANT_UNIVERSE_V17_KLINE_UNIFIED";
+        const INDEX_STORAGE_KEY = "TW_INDEX_3DAY_INTRADAY_V6";
         const PAGE_SIZE = 25;
 
         let allStocksRaw = [];
@@ -641,8 +641,8 @@
         let currentPage = 1;
         let activeDrawerCode = null;
         let klineOverlays = { bb: true, sr: true };
-        let lastSyncLabel = "等待同步雲端即時資料";
-        let lastSyncSource = "讀取 tw_market_data.json 中（絕無虛構價格）";
+        let lastSyncLabel = "同步 K 線報價中";
+        let lastSyncSource = "K 線同源追蹤引擎（Yahoo Chart / FinMind / GitHub JSON）";
         let indexIntradayPoints = [];
 
         const KEY_FINANCIAL_NEWS = [
@@ -783,8 +783,22 @@
         }
 
         // =========================================================================
-        // 3. 純真實 K 線清理與技術分析指標引擎
+        // 3. 純真實 K 線清理、統一價格驅動與技術分析指標引擎
         // =========================================================================
+        function applyLatestKlineBarToStockPrice(stock) {
+            if (!Array.isArray(stock.klines50d) || stock.klines50d.length === 0) return;
+            const lastBar = stock.klines50d[stock.klines50d.length - 1];
+            if (lastBar && Number(lastBar.c) > 0) {
+                stock.price = Number(Number(lastBar.c).toFixed(2));
+                if (stock.klines50d.length >= 2) {
+                    const prevBar = stock.klines50d[stock.klines50d.length - 2];
+                    if (prevBar && Number(prevBar.c) > 0) {
+                        stock.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
+                    }
+                }
+            }
+        }
+
         function sanitizeRealKlineSeries(stock) {
             if (!Array.isArray(stock.klines50d) || stock.klines50d.length === 0) {
                 stock.klines50d = [];
@@ -810,17 +824,7 @@
                 };
             });
             stock.klines50d = validBars.slice(-50);
-
-            if (stock.klines50d.length >= 1) {
-                const lastBar = stock.klines50d[stock.klines50d.length - 1];
-                stock.price = Number(lastBar.c.toFixed(2));
-                if (stock.klines50d.length >= 2) {
-                    const prevBar = stock.klines50d[stock.klines50d.length - 2];
-                    if (prevBar.c > 0) {
-                        stock.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
-                    }
-                }
-            }
+            applyLatestKlineBarToStockPrice(stock);
         }
 
         function computeTechnicalIndicators(bars) {
@@ -1413,8 +1417,70 @@
         }
 
         // =========================================================================
-        // 7. GitHub 自動更新 JSON 讀取與即時報價同步引擎
+        // 7. K 線同源即時價格追蹤引擎（Yahoo Chart / FinMind / GitHub JSON 三重路徑）
         // =========================================================================
+        async function fetchRealKlineFromMultiSources(stock) {
+            // 路徑 A：FinMind 開放歷史日線 API
+            try {
+                const startDate = new Date(Date.now() - 105 * 86400000).toISOString().slice(0, 10);
+                const fmUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stock.code}&start_date=${startDate}`;
+                const resp = await fetch(fmUrl);
+                if (resp.ok) {
+                    const json = await resp.json();
+                    if (json && Array.isArray(json.data) && json.data.length > 0) {
+                        const bars = json.data.slice(-50).map(r => ({
+                            d: String(r.date || "").slice(5).replace("-", "/"),
+                            o: Number(r.open),
+                            h: Number(r.max),
+                            l: Number(r.min),
+                            c: Number(r.close),
+                            v: Math.round(Number(r.Trading_Volume || 0) / 1000)
+                        })).filter(b => b.c > 0);
+                        if (bars.length > 0) return bars;
+                    }
+                }
+            } catch (_) {}
+
+            // 路徑 B：Yahoo Finance Chart API（含盤中即時最新一根 K 棒）
+            const suffix = stock.market === "TPEx" ? ".TWO" : ".TW";
+            const yfTarget = `https://query1.finance.yahoo.com/v8/finance/chart/${stock.code}${suffix}?range=3mo&interval=1d`;
+            const candidateUrls = [
+                yfTarget,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(yfTarget)}`,
+                `https://corsproxy.io/?${encodeURIComponent(yfTarget)}`
+            ];
+
+            for (const u of candidateUrls) {
+                try {
+                    const r = await fetch(u);
+                    if (!r.ok) continue;
+                    const data = await r.json();
+                    const res = data?.chart?.result?.[0];
+                    if (!res || !Array.isArray(res.timestamp)) continue;
+                    const quote = res.indicators?.quote?.[0];
+                    if (!quote) continue;
+                    const bars = [];
+                    for (let i = 0; i < res.timestamp.length; i++) {
+                        const c = Number(quote.close?.[i]);
+                        if (!c || isNaN(c) || c <= 0) continue;
+                        const dt = new Date(res.timestamp[i] * 1000);
+                        const mm = String(dt.getMonth() + 1).padStart(2, "0");
+                        const dd = String(dt.getDate()).padStart(2, "0");
+                        bars.push({
+                            d: `${mm}/${dd}`,
+                            o: Number(quote.open?.[i]) || c,
+                            h: Number(quote.high?.[i]) || c,
+                            l: Number(quote.low?.[i]) || c,
+                            c,
+                            v: Math.round((Number(quote.volume?.[i]) || 0) / 1000)
+                        });
+                    }
+                    if (bars.length > 0) return bars.slice(-50);
+                } catch (_) {}
+            }
+            return null;
+        }
+
         async function loadGithubAutoUpdatedJson(silent = true) {
             try {
                 const resp = await fetch(`./tw_market_data.json?_=${Date.now()}`, { cache: "no-store" });
@@ -1441,7 +1507,7 @@
                 allStocksRaw = mergedList;
                 allStocksRaw.forEach(st => sanitizeRealKlineSeries(st));
                 lastSyncLabel = `${payload.updated_at || payload.trading_date || "最新"}`;
-                lastSyncSource = `✓ GitHub 雲端即時/盤後同步 (${payload.trading_date || ""}・共 ${mergedList.length} 家)`;
+                lastSyncSource = `✓ K 線同源即時同步 (${payload.trading_date || ""}・共 ${mergedList.length} 家)`;
                 saveDatabaseToLocalStorage();
                 populateSectorDropdown();
                 recomputeAndRenderAll();
@@ -1456,7 +1522,7 @@
                 }
 
                 if (!silent) {
-                    showToast(`已成功載入 GitHub 雲端最新行情（${payload.trading_date}，共 ${mergedList.length} 檔）！`, "✅");
+                    showToast(`已成功載入最新行情與 K 線（${payload.trading_date}，共 ${mergedList.length} 檔）！`, "✅");
                 }
                 return mergedList.length;
             } catch (_) {
@@ -1470,29 +1536,71 @@
             const label = document.getElementById("btnLiveSyncLabel");
             const bar = document.getElementById("liveSyncProgressBar");
             const barText = document.getElementById("liveSyncProgressText");
+            const barPct = document.getElementById("liveSyncProgressPct");
+            const barFill = document.getElementById("liveSyncProgressFill");
 
             btn.disabled = true;
             icon.classList.add("animate-spin-fast");
-            label.textContent = "同步即時報價中...";
+            label.textContent = "追蹤 K 線報價中...";
             bar.classList.remove("hidden");
-            barText.textContent = "正在讀取 GitHub 自動更新檔 (tw_market_data.json) 最新即時成交價...";
+            barFill.style.width = "20%";
+            barText.textContent = "正在同步 GitHub 雲端資料庫與核心權值股真實 K 線最新成交價...";
 
             try {
+                // 1. 先讀 GitHub 雲端即時更新檔
                 const jsonCount = await loadGithubAutoUpdatedJson(true);
-                if (jsonCount > 0) {
-                    showToast(`已同步 GitHub 最新行情（${lastSyncLabel}・共 ${jsonCount} 檔上市櫃真實報價）！`, "✅");
-                    return;
+                barFill.style.width = "50%";
+
+                // 2. 再對關注核心股與當前顯示前 12 檔直連追蹤最新 K 線（確保盤中最新一根 K 棒直接驅動股價）
+                const prioritySet = new Set(["2330", "2454", "2317", "2382", "3017", "2891", "2303", "2881", "2610", "2618", "1815", "2355"]);
+                if (activeDrawerCode) prioritySet.add(activeDrawerCode);
+                filteredStocks.slice(0, 8).forEach(s => prioritySet.add(s.code));
+
+                const targetCodes = Array.from(prioritySet).slice(0, 15);
+                let klineUpdatedCount = 0;
+
+                for (let idx = 0; idx < targetCodes.length; idx++) {
+                    const code = targetCodes[idx];
+                    const rawSt = allStocksRaw.find(s => s.code === code);
+                    if (!rawSt) continue;
+                    barPct.textContent = `${idx + 1} / ${targetCodes.length}`;
+                    barFill.style.width = `${50 + Math.round(((idx + 1) / targetCodes.length) * 50)}%`;
+
+                    const bars = await fetchRealKlineFromMultiSources(rawSt);
+                    if (bars && bars.length > 0) {
+                        rawSt.klines50d = bars;
+                        sanitizeRealKlineSeries(rawSt);
+                        klineUpdatedCount++;
+                    }
                 }
 
-                lastSyncLabel = "尚未讀取到 tw_market_data.json";
-                lastSyncSource = "請先於 GitHub Actions 執行一次 Run workflow 產出即時資料";
-                recomputeAndRenderAll();
-                showToast("尚未找到 tw_market_data.json，請到 GitHub Actions 按一次 Run workflow 即可自動抓取全市場即時股價！", "ℹ️");
+                await syncLiveIndex3DayIntraday(true);
+
+                if (klineUpdatedCount > 0 || jsonCount > 0) {
+                    const nowStr = new Date().toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+                    lastSyncLabel = `今日 ${nowStr} K 線同步`;
+                    lastSyncSource = klineUpdatedCount > 0
+                        ? `✓ 已由真實 K 線最新價格更新 ${klineUpdatedCount} 檔核心股${jsonCount > 0 ? `＋全市場 ${jsonCount} 檔` : ""}`
+                        : `✓ GitHub 雲端即時資料庫 (${jsonCount} 檔)`;
+                    saveDatabaseToLocalStorage();
+                    recomputeAndRenderAll();
+                    if (activeDrawerCode) {
+                        const updated = evaluatedStocks.find(s => s.code === activeDrawerCode);
+                        if (updated) {
+                            syncDrawerHeaderWithStock(updated);
+                            renderDrawerTechnicalPanel(updated);
+                            renderDrawerKlineChart(updated);
+                        }
+                    }
+                    showToast(`同步完成！已依最新真實 K 棒價格校準全站股價與指標！`, "✅");
+                } else {
+                    showToast("目前預覽環境限制外部連線，部署至 GitHub Pages 後即可自動追蹤最新 K 線股價！", "ℹ️");
+                }
             } finally {
                 btn.disabled = false;
                 icon.classList.remove("animate-spin-fast");
-                label.textContent = "🔄 同步最新即時／盤後報價";
-                setTimeout(() => bar.classList.add("hidden"), 1600);
+                label.textContent = "🔄 追蹤最新 K 線與即時股價";
+                setTimeout(() => bar.classList.add("hidden"), 1500);
             }
         }
 
@@ -1660,7 +1768,35 @@
             ctx.stroke();
         }
 
-        function syncLiveIndex3DayIntraday(silent = false) {
+        async function syncLiveIndex3DayIntraday(silent = false) {
+            try {
+                const yfUrl = "https://query1.finance.yahoo.com/v8/finance/chart/%5ETWII?range=5d&interval=30m";
+                const urls = [yfUrl, `https://api.allorigins.win/raw?url=${encodeURIComponent(yfUrl)}`];
+                for (const u of urls) {
+                    const resp = await fetch(u);
+                    if (!resp.ok) continue;
+                    const data = await resp.json();
+                    const res = data?.chart?.result?.[0];
+                    const closes = res?.indicators?.quote?.[0]?.close;
+                    if (Array.isArray(res?.timestamp) && Array.isArray(closes)) {
+                        const pts = [];
+                        for (let i = 0; i < res.timestamp.length; i++) {
+                            const p = Number(closes[i]);
+                            if (!p || isNaN(p) || p < 10000) continue;
+                            const dt = new Date(res.timestamp[i] * 1000);
+                            const label = `${String(dt.getMonth() + 1).padStart(2, "0")}/${String(dt.getDate()).padStart(2, "0")} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+                            pts.push({ t: label, p: Number(p.toFixed(2)), s: "DAY" });
+                        }
+                        if (pts.length >= 10) {
+                            indexIntradayPoints = pts.slice(-30);
+                            localStorage.setItem(INDEX_STORAGE_KEY, JSON.stringify(indexIntradayPoints));
+                            render3DayIndexContinuousChart();
+                            if (!silent) showToast("已連網更新近 3 日加權指數分時走勢！", "✅");
+                            return;
+                        }
+                    }
+                }
+            } catch (_) {}
             render3DayIndexContinuousChart();
             if (!silent) {
                 showToast("已刷新近 3 日加權日盤與台指期夜盤連續走勢圖", "✅");
@@ -1780,46 +1916,28 @@
 
         async function fetchLiveKlineForStock(rawStock, notifyUser = false) {
             const tag = document.getElementById("drawerKlineSourceTag");
-            if (tag) tag.textContent = "連網查詢真實日線中...";
+            if (tag) tag.textContent = "連網追蹤真實 K 線中...";
 
-            try {
-                const startDate = new Date(Date.now() - 105 * 86400000).toISOString().slice(0, 10);
-                const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${rawStock.code}&start_date=${startDate}`;
-                const resp = await fetch(url);
-                if (resp.ok) {
-                    const json = await resp.json();
-                    if (json && Array.isArray(json.data) && json.data.length > 0) {
-                        const bars = json.data.slice(-50).map(r => ({
-                            d: String(r.date || "").slice(5).replace("-", "/"),
-                            o: Number(r.open),
-                            h: Number(r.max),
-                            l: Number(r.min),
-                            c: Number(r.close),
-                            v: Math.round(Number(r.Trading_Volume || 0) / 1000)
-                        })).filter(b => b.c > 0);
-
-                        if (bars.length > 0) {
-                            const target = allStocksRaw.find(s => s.code === rawStock.code);
-                            if (target) {
-                                target.klines50d = bars;
-                                sanitizeRealKlineSeries(target);
-                                saveDatabaseToLocalStorage();
-                                recomputeAndRenderAll();
-                                if (activeDrawerCode === target.code) {
-                                    const updatedEval = evaluatedStocks.find(s => s.code === target.code);
-                                    if (updatedEval) {
-                                        syncDrawerHeaderWithStock(updatedEval);
-                                        renderDrawerTechnicalPanel(updatedEval);
-                                        renderDrawerKlineChart(updatedEval);
-                                    }
-                                }
-                                if (notifyUser) showToast(`已取得 ${rawStock.code} ${rawStock.name} 共 ${bars.length} 個交易日真實 K 線並同步價格！`, "✅");
-                                return;
-                            }
+            const bars = await fetchRealKlineFromMultiSources(rawStock);
+            if (bars && bars.length > 0) {
+                const target = allStocksRaw.find(s => s.code === rawStock.code);
+                if (target) {
+                    target.klines50d = bars;
+                    sanitizeRealKlineSeries(target);
+                    saveDatabaseToLocalStorage();
+                    recomputeAndRenderAll();
+                    if (activeDrawerCode === target.code) {
+                        const updatedEval = evaluatedStocks.find(s => s.code === target.code);
+                        if (updatedEval) {
+                            syncDrawerHeaderWithStock(updatedEval);
+                            renderDrawerTechnicalPanel(updatedEval);
+                            renderDrawerKlineChart(updatedEval);
                         }
                     }
+                    if (notifyUser) showToast(`已取得 ${rawStock.code} ${rawStock.name} 共 ${bars.length} 個交易日真實 K 線並同步全站股價！`, "✅");
+                    return;
                 }
-            } catch (_) {}
+            }
 
             if (tag) tag.textContent = "尚無真實歷史 K 線快取";
             if (notifyUser) showToast("預覽環境無法直連外部日線 API，部署至 GitHub 或手動貼上 OHLC 即可顯示！", "ℹ️");
@@ -2188,7 +2306,7 @@
                         renderDrawerKlineChart(updated);
                     }
                     closeManualKlineModal();
-                    showToast(`已匯入 ${bars.length} 筆真實日線並同步更新參考價格與布林/支撐壓力！`, "✅");
+                    showToast(`已匯入 ${bars.length} 筆真實日線並同步更新全站股價、布林與支撐壓力！`, "✅");
                 }
             }
         }
@@ -2197,14 +2315,13 @@
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(INDEX_STORAGE_KEY);
             allStocksRaw = buildCleanInitialUniverse();
-            lastSyncLabel = "重新讀取雲端最新數據中...";
-            lastSyncSource = "讀取 tw_market_data.json 中";
+            lastSyncLabel = "重新追蹤 K 線報價中...";
+            lastSyncSource = "K 線同源追蹤引擎";
             load3DayIndexData();
             populateSectorDropdown();
             recomputeAndRenderAll();
             render3DayIndexContinuousChart();
-            const cnt = await loadGithubAutoUpdatedJson(true);
-            showToast(cnt > 0 ? `已重新載入雲端最新 ${cnt} 檔真實報價！` : "已清除舊快取！", "✅");
+            await triggerOneClickLiveUpdate();
         }
 
         function populateSectorDropdown() {
@@ -2245,9 +2362,23 @@
             recomputeAndRenderAll();
             render3DayIndexContinuousChart();
 
+            // 啟動時立即讀取 GitHub 雲端 JSON 並追蹤最新真實 K 線報價
             await loadGithubAutoUpdatedJson(true);
+            const coreToWarmup = ["2330", "2454", "2317", "2382", "3017", "2891", "2303", "2881", "2610", "2618", "1815", "2355"];
+            for (const code of coreToWarmup) {
+                const rawSt = allStocksRaw.find(s => s.code === code);
+                if (rawSt) {
+                    const bars = await fetchRealKlineFromMultiSources(rawSt);
+                    if (bars && bars.length > 0) {
+                        rawSt.klines50d = bars;
+                        sanitizeRealKlineSeries(rawSt);
+                    }
+                }
+            }
+            saveDatabaseToLocalStorage();
+            recomputeAndRenderAll();
 
-            // 每 60 秒自動從 GitHub Pages 抓取最新更新的 tw_market_data.json
+            // 每 60 秒自動從 GitHub Pages 重新讀取最新 tw_market_data.json
             setInterval(() => {
                 loadGithubAutoUpdatedJson(true);
             }, 60000);
