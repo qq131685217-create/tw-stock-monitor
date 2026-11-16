@@ -14,6 +14,7 @@ YAHOO_CHART_BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart"
 FINMIND_DATA_URL = "https://api.finmindtrade.com/api/v4/data"
 
 OUTPUT_JSON = "tw_market_data.json"
+TWSE_TOP10_URL = "https://www.twse.com.tw/rwd/zh/fund/T86"
 
 HEADERS = {
     "User-Agent": (
@@ -46,6 +47,54 @@ def safe_int(val, default=0):
         return int(float(s))
     except Exception:
         return default
+def fetch_top10_institutional_data():
+    try:
+        payload = {
+            "response": "json",
+            "date": datetime.now(TW_TZ).strftime("%Y%m%d"),
+            "selectType": "ALL"
+        }
+        resp = requests.get(TWSE_TOP10_URL, params=payload, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        rows = data.get("data", []) if isinstance(data, dict) else []
+        result = []
+
+        for row in rows[:10]:
+            if not row or len(row) < 6:
+                continue
+
+            code = str(row[0]).strip()
+            name = str(row[1]).strip()
+            foreign = safe_int(row[2], 0)
+            trust = safe_int(row[3], 0)
+            dealer = safe_int(row[4], 0)
+            total = safe_int(row[5], 0)
+
+            if not code:
+                continue
+
+            result.append({
+                "code": code,
+                "name": name,
+                "market": "TWSE",
+                "foreign": foreign,
+                "trust": trust,
+                "dealer": dealer,
+                "total": total
+            })
+
+        return {
+            "updated_at": datetime.now(TW_TZ).strftime("%Y/%m/%d %H:%M"),
+            "top10": result
+        }
+    except Exception:
+        return {
+            "updated_at": datetime.now(TW_TZ).strftime("%Y/%m/%d %H:%M"),
+            "top10": []
+        }
+
 
 
 def load_previous_data():
@@ -355,6 +404,11 @@ def main():
 
     print(f"=== [完成] 成功儲存 {len(final_list)} 檔資料至 {OUTPUT_JSON} ===")
 
+    top10_payload = fetch_top10_institutional_data()
+    with open("tw_top10_data.json", "w", encoding="utf-8") as f:
+        json.dump(top10_payload, f, ensure_ascii=False, separators=(",", ":"))
+
+    print(f"=== [完成] 成功儲存法人買賣超前十大資料至 tw_top10_data.json ===")
 
 if __name__ == "__main__":
     main()
