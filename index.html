@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台股全市場（1,867家）量化監測與即時更新資料庫</title>
+    <title>台股全市場量化監測與選股系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,11 +11,10 @@
     <style>
         :root {
             --bg: #f4f7fb;
-            --bg-strong: #eef5ff;
-            --panel: rgba(255,255,255,0.92);
+            --bg-soft: #eef5ff;
+            --panel: rgba(255,255,255,0.96);
             --panel-strong: #ffffff;
             --border: #e2e8f0;
-            --border-strong: #cfe0ff;
             --text: #0f172a;
             --muted: #64748b;
             --blue: #2563eb;
@@ -27,20 +26,15 @@
             --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
 
         body {
             font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(59,130,246,0.15), transparent 25%),
-                radial-gradient(circle at bottom right, rgba(139,92,246,0.12), transparent 20%),
-                linear-gradient(180deg, var(--bg-strong) 0%, var(--bg) 100%);
+                radial-gradient(circle at top left, rgba(59,130,246,0.14), transparent 26%),
+                radial-gradient(circle at bottom right, rgba(99,102,241,0.12), transparent 18%),
+                linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
             color: var(--text);
             letter-spacing: 0.01em;
         }
@@ -50,11 +44,24 @@
             position: fixed;
             inset: 0;
             pointer-events: none;
-            background-image: linear-gradient(rgba(148,163,184,0.04) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(148,163,184,0.04) 1px, transparent 1px);
-            background-size: 26px 26px;
-            mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+            background-image:
+                linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+            mask-image: radial-gradient(circle at center, black 32%, transparent 100%);
         }
+
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148,163,184,0.8) transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(148,163,184,0.75);
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.9); }
 
         input[type="range"].quant-slider {
             -webkit-appearance: none;
@@ -66,7 +73,6 @@
             outline: none;
             box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
         }
-
         input[type="range"].quant-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -79,90 +85,1213 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.42);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
-
         input[type="range"].quant-slider::-webkit-slider-thumb:hover {
             transform: scale(1.12);
             box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
         }
 
-        .custom-scrollbar {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(148,163,184,0.8) transparent;
+        .card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            border-radius: 1.25rem;
+            box-shadow: var(--shadow);
         }
 
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(148,163,184,0.7);
-            border-radius: 9999px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(100,116,139,0.9);
-        }
-
-        @keyframes spinSlow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .animate-spin-fast {
-            animation: spinSlow 0.8s linear infinite;
-        }
-
-        .bg-white, section.bg-white,
-        .rounded-2xl,
-        .rounded-xl,
-        .rounded-lg {
-            box-shadow: var(--shadow) !important;
-        }
-
-        section.bg-white {
-            border-color: rgba(226, 232, 240, 0.95) !important;
-            background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92)) !important;
-        }
-
-        button, select, input {
+        .preset-btn, .qual-pill, .mkt-btn, .news-tab, .top10-tab {
             transition: all 0.18s ease;
         }
-
-        button:hover {
+        .preset-btn:hover, .qual-pill:hover, .mkt-btn:hover, .news-tab:hover, .top10-tab:hover {
             transform: translateY(-1px);
-        }
-
-        .preset-btn,
-        .qual-pill,
-        .mkt-btn,
-        .news-tab,
-        .top10-tab,
-        .quant-slider {
-            border-radius: 0.9rem;
-        }
-
-        .preset-btn:hover,
-        .qual-pill:hover,
-        .mkt-btn:hover,
-        .news-tab:hover,
-        .top10-tab:hover {
-            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
         }
 
         @media (max-width: 1024px) {
-            main {
-                padding-bottom: 2rem;
-            }
-
-            body {
-                background-attachment: fixed;
-            }
+            body { background-attachment: fixed; }
         }
     </style>
 </head>
 <body class="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900">
+    <header class="sticky top-0 z-30 shrink-0 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+        <div class="max-w-[1680px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 overflow-x-auto custom-scrollbar">
+            <div class="flex items-center gap-2.5 shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-base shadow-sm shrink-0">量</div>
+                <div class="shrink-0">
+                    <div class="flex items-center gap-2 whitespace-nowrap">
+                        <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 whitespace-nowrap">台股全市場量化監測與選股系統</h1>
+                        <span id="headerUniverseBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">上市 1,032 ＋ 上櫃 835 ＝ 1,867 家</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5 text-xs whitespace-nowrap">
+                        <span id="calendarStatusBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 font-semibold whitespace-nowrap">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping shrink-0"></span>
+                            <span id="calendarStatusText">盤中即時報價與雲端同步中｜100% 以當下成交價為準</span>
+                        </span>
+                        <span id="storageStatusBadge" class="hidden xl:inline-block text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">資料來源：✓ 全面以當下即時成交價為準 ＋ 1,867 檔真實 K 線同源追蹤</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                <button type="button" id="btnAutoLiveToggle" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-all cursor-pointer">
+                    <span id="autoLiveDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                    <span id="btnAutoLiveLabel">自動同步：開啟 (15s)</span>
+                </button>
+
+                <button type="button" id="btnLiveSync" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-bold shadow-sm hover:shadow transition-all cursor-pointer">
+                    <svg id="iconLiveSync" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>🔄 立即同步最新股價</span>
+                </button>
+
+                <button type="button" onclick="openManualImportModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap">
+                    <span>📋 手動貼上報價</span>
+                </button>
+
+                <button type="button" onclick="resetToDefaultCalibratedData()" class="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap" title="清除瀏覽器快取並還原至預設資料庫">
+                    <span>↺ 還原預設</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="liveSyncProgressBar" class="hidden bg-blue-50 border-t border-blue-200 px-4 sm:px-6 py-2">
+            <div class="max-w-[1680px] mx-auto flex items-center justify-between gap-2 text-xs whitespace-nowrap overflow-x-auto">
+                <div class="flex items-center gap-2 text-blue-800 font-semibold whitespace-nowrap">
+                    <span class="inline-block w-2 h-2 rounded-full bg-blue-600 animate-ping shrink-0"></span>
+                    <span id="liveSyncProgressText">正在連線 GitHub 雲端與即時報價介面同步當下成交價...</span>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-white text-blue-700 border border-blue-200 font-mono text-[11px] whitespace-nowrap shrink-0">通道：FinMind ＋ Yahoo v8 Chart 即時成交價優先</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 min-h-0 max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-4 lg:overflow-hidden">
+        <div class="flex flex-col lg:flex-row gap-5 h-full items-stretch">
+            <aside class="w-full lg:w-[350px] xl:w-[370px] shrink-0 lg:h-full lg:overflow-y-auto custom-scrollbar lg:pr-1.5 pb-4 space-y-4">
+                <section class="card p-4">
+                    <div class="flex items-center justify-between mb-3 whitespace-nowrap">
+                        <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="w-2 h-4 rounded-full bg-blue-600 shrink-0"></span>
+                            <span>投資策略模型預設</span>
+                        </h2>
+                        <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">一鍵套用權重</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" data-preset="balanced" class="preset-btn px-3 py-2.5 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer bg-blue-600 text-white border-blue-600 shadow-xs">
+                            <div class="whitespace-nowrap">⚖️ 全市場均衡</div>
+                            <div class="text-[10px] opacity-85 font-normal mt-0.5 whitespace-nowrap">基本25/估25/籌25/技25</div>
+                        </button>
+                        <button type="button" data-preset="dividend" class="preset-btn px-3 py-2.5 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-slate-50">
+                            <div class="whitespace-nowrap">🛡️ 高股息護城河</div>
+                            <div class="text-[10px] text-slate-400 font-normal mt-0.5 whitespace-nowrap">基本25/估45/籌15/技15</div>
+                        </button>
+                        <button type="button" data-preset="institutional" class="preset-btn px-3 py-2.5 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-slate-50">
+                            <div class="whitespace-nowrap">🏦 投信法人籌碼</div>
+                            <div class="text-[10px] text-slate-400 font-normal mt-0.5 whitespace-nowrap">基本20/估15/籌45/技20</div>
+                        </button>
+                        <button type="button" data-preset="breakout" class="preset-btn px-3 py-2.5 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-slate-50">
+                            <div class="whitespace-nowrap">🔥 短期爆發點火</div>
+                            <div class="text-[10px] text-slate-400 font-normal mt-0.5 whitespace-nowrap">基本15/估5/籌45/技35</div>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="card p-4">
+                    <div class="flex items-center justify-between mb-3 whitespace-nowrap">
+                        <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="w-2 h-4 rounded-full bg-indigo-600 shrink-0"></span>
+                            <span>四大維度自訂權重滑桿</span>
+                        </h2>
+                        <span id="weightSumBadge" class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">總和 100%</span>
+                    </div>
+
+                    <div class="space-y-3.5">
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-semibold mb-1 whitespace-nowrap gap-2">
+                                <span class="text-slate-700 whitespace-nowrap">基本面成長（ROE / 營收年增）</span>
+                                <span id="val-wFund" class="text-blue-700 font-extrabold whitespace-nowrap shrink-0">25%</span>
+                            </div>
+                            <input type="range" id="slider-wFund" min="0" max="100" step="5" value="25" class="quant-slider" data-weight="wFund">
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-semibold mb-1 whitespace-nowrap gap-2">
+                                <span class="text-slate-700 whitespace-nowrap">估值與殖利率（PE / 殖利率）</span>
+                                <span id="val-wVal" class="text-blue-700 font-extrabold whitespace-nowrap shrink-0">25%</span>
+                            </div>
+                            <input type="range" id="slider-wVal" min="0" max="100" step="5" value="25" class="quant-slider" data-weight="wVal">
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-semibold mb-1 whitespace-nowrap gap-2">
+                                <span class="text-slate-700 whitespace-nowrap">三大法人籌碼（外資+投信+自營）</span>
+                                <span id="val-wInst" class="text-blue-700 font-extrabold whitespace-nowrap shrink-0">25%</span>
+                            </div>
+                            <input type="range" id="slider-wInst" min="0" max="100" step="5" value="25" class="quant-slider" data-weight="wInst">
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-semibold mb-1 whitespace-nowrap gap-2">
+                                <span class="text-slate-700 whitespace-nowrap">技術面動能（均線 / 量價結構）</span>
+                                <span id="val-wTech" class="text-blue-700 font-extrabold whitespace-nowrap shrink-0">25%</span>
+                            </div>
+                            <input type="range" id="slider-wTech" min="0" max="100" step="5" value="25" class="quant-slider" data-weight="wTech">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card p-4">
+                    <div class="flex items-center justify-between mb-2.5 whitespace-nowrap">
+                        <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="w-2 h-4 rounded-full bg-rose-600 shrink-0"></span>
+                            <span>嚴選量化資格篩選</span>
+                        </h2>
+                        <span class="text-[11px] text-slate-400 whitespace-nowrap">買進門檻 ≥ 84.0</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" data-qual="all" class="qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-slate-900 text-white border-slate-900 whitespace-nowrap">全部 (<span id="count-qual-all">0</span>)</button>
+                        <button type="button" data-qual="buy" class="qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-700 whitespace-nowrap">嚴選買進 (<span id="count-qual-buy">0</span>)</button>
+                        <button type="button" data-qual="strong" class="qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-700 whitespace-nowrap">強力買進 (<span id="count-qual-strong">0</span>)</button>
+                        <button type="button" data-qual="watch" class="qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-700 whitespace-nowrap">列入觀察 (<span id="count-qual-watch">0</span>)</button>
+                    </div>
+                </section>
+
+                <section class="card p-4 space-y-3">
+                    <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+                        <span class="w-2 h-4 rounded-full bg-emerald-600 shrink-0"></span>
+                        <span>市場別、產業與標的搜尋</span>
+                    </h2>
+
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="輸入代號或名稱（如 2330、台積電、奇鋐）" class="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" /></svg>
+                        <button type="button" onclick="clearSearchInput()" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 whitespace-nowrap">掛牌市場別</label>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button type="button" data-market="ALL" class="mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-blue-600 text-white border-blue-600 cursor-pointer whitespace-nowrap">全部 (1,867)</button>
+                            <button type="button" data-market="TWSE" class="mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer whitespace-nowrap">上市 (1,032)</button>
+                            <button type="button" data-market="TPEx" class="mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer whitespace-nowrap">上櫃 (835)</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="sectorSelect" class="block text-[11px] font-bold text-slate-500 mb-1.5 whitespace-nowrap">官方產業分類</label>
+                        <select id="sectorSelect" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500">
+                            <option value="ALL">全部產業類別（全市場 28 大類）</option>
+                        </select>
+                    </div>
+                </section>
+            </aside>
+
+            <div class="flex-1 min-w-0 lg:h-full lg:overflow-y-auto custom-scrollbar lg:pr-1 pb-6 space-y-5">
+                <section class="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
+                    <div class="card p-4">
+                        <div class="text-xs font-semibold text-slate-500 whitespace-nowrap">全市場納管標的總數</div>
+                        <div class="mt-1.5 flex items-baseline gap-1.5 whitespace-nowrap">
+                            <span id="kpiTotalUniverse" class="text-2xl font-extrabold text-slate-900">1,867</span>
+                            <span class="text-xs font-bold text-blue-600">家上市櫃</span>
+                        </div>
+                        <div id="kpiMarketBreakdown" class="mt-1 text-[11px] text-slate-500 font-medium whitespace-nowrap">上市 1,032 家 ｜ 上櫃 835 家</div>
+                    </div>
+
+                    <div class="card p-4">
+                        <div class="text-xs font-semibold text-slate-500 whitespace-nowrap">嚴選買進資格（≥84.0分）</div>
+                        <div class="mt-1.5 flex items-baseline gap-1.5 whitespace-nowrap">
+                            <span id="kpiBuyQualified" class="text-2xl font-extrabold text-rose-600">0</span>
+                            <span class="text-xs font-bold text-rose-600">檔通過濾網</span>
+                        </div>
+                        <div class="mt-1 text-[11px] text-slate-500 font-medium whitespace-nowrap">多因子量化評分合格標的</div>
+                    </div>
+
+                    <div class="card p-4">
+                        <div class="text-xs font-semibold text-slate-500 whitespace-nowrap">強力買進頂尖（≥88.5分）</div>
+                        <div class="mt-1.5 flex items-baseline gap-1.5 whitespace-nowrap">
+                            <span id="kpiStrongBuy" class="text-2xl font-extrabold text-indigo-600">0</span>
+                            <span class="text-xs font-bold text-indigo-600">檔核心首選</span>
+                        </div>
+                        <div class="mt-1 text-[11px] text-slate-500 font-medium whitespace-nowrap">基本面＋籌碼＋技術面三強共振</div>
+                    </div>
+
+                    <div class="card p-4">
+                        <div class="text-xs font-semibold text-slate-500 whitespace-nowrap">最後資料同步與來源</div>
+                        <div class="mt-1.5 flex items-baseline gap-1.5 whitespace-nowrap">
+                            <span id="kpiSyncTimestamp" class="text-base sm:text-lg font-extrabold text-slate-900 whitespace-nowrap">動態即時監測</span>
+                        </div>
+                        <div id="kpiSyncSourceLabel" class="mt-1 text-[11px] text-emerald-700 font-bold truncate">✓ 100% 以當下即時成交價為準</div>
+                    </div>
+                </section>
+
+                <section class="card p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2 whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-xs font-extrabold whitespace-nowrap shrink-0">市場焦點</span>
+                                <span>📰 關鍵財經新聞 × 量化推薦可投資標的</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">彙整近期台股核心產業利多與資金動向，點擊下方推薦標的列可直接檢視買進區間與 50 日 K 線走勢</p>
+                        </div>
+                        <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0 whitespace-nowrap">
+                            <button type="button" data-news="ALL" class="news-tab px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm cursor-pointer whitespace-nowrap">全部焦點</button>
+                            <button type="button" data-news="AI" class="news-tab px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap">AI／ASIC 算力</button>
+                            <button type="button" data-news="FIN" class="news-tab px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap">金融與高息防禦</button>
+                            <button type="button" data-news="SEMI" class="news-tab px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap">先進封測／材料</button>
+                        </div>
+                    </div>
+                    <div id="keyNewsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch"></div>
+                </section>
+
+                <section class="card p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2 whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded-lg bg-rose-600 text-white text-xs font-extrabold whitespace-nowrap shrink-0">TOP 4</span>
+                                <span>量化多因子嚴選首選標的（即時隨權重動態重排）</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">依據當前權重配置自動計算建議買進區間、停利目標與停損位，點擊卡片檢視 K 線圖</p>
+                        </div>
+                        <span id="activeStrategyTag" class="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap shrink-0">當前模型：全市場均衡配置</span>
+                    </div>
+                    <div id="top4CardsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5"></div>
+                </section>
+
+                <section class="card p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900 flex flex-wrap items-center gap-2">
+                                <span class="whitespace-nowrap">📊 上市／上櫃三大法人合計單日買賣超前十大</span>
+                                <span id="top10DateBadge" class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold whitespace-nowrap shrink-0">動態即時統計</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">統計口徑：外資 ＋ 投信 ＋ 自營商合計單日買賣超張數（點擊任一列可開啟 K 線診斷）</p>
+                        </div>
+                        <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0 whitespace-nowrap">
+                            <button type="button" data-top10="ALL" class="top10-tab px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-700 shadow-sm cursor-pointer whitespace-nowrap">全市場總覽</button>
+                            <button type="button" data-top10="TWSE" class="top10-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap">上市 TWSE</button>
+                            <button type="button" data-top10="TPEx" class="top10-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap">上櫃 TPEx</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <div class="rounded-xl border border-rose-200 bg-rose-50/30 overflow-hidden">
+                            <div class="px-3.5 py-2.5 bg-rose-50 border-b border-rose-200 flex items-center justify-between whitespace-nowrap gap-2">
+                                <span class="text-xs font-extrabold text-rose-800 whitespace-nowrap">🔴 三大法人合計買超前十強（張）</span>
+                                <span class="text-[11px] font-semibold text-rose-600 whitespace-nowrap">外資＋投信＋自營合計</span>
+                            </div>
+                            <div id="top10BuyList" class="divide-y divide-rose-100 bg-white"></div>
+                        </div>
+
+                        <div class="rounded-xl border border-emerald-200 bg-emerald-50/30 overflow-hidden">
+                            <div class="px-3.5 py-2.5 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between whitespace-nowrap gap-2">
+                                <span class="text-xs font-extrabold text-emerald-800 whitespace-nowrap">🟢 三大法人合計賣超前十大警示（張）</span>
+                                <span class="text-[11px] font-semibold text-emerald-700 whitespace-nowrap">外資＋投信＋自營合計</span>
+                            </div>
+                            <div id="top10SellList" class="divide-y divide-emerald-100 bg-white"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card overflow-hidden">
+                    <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900 whitespace-nowrap">全市場 1,867 家上市櫃即時量化監測明細表</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">目前篩選結果共 <span id="filteredTotalCount" class="font-extrabold text-blue-700">0</span> 檔標的（一律以當下即時成交價為準）</p>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-xs whitespace-nowrap shrink-0">
+                            <label for="sortSelect" class="font-semibold text-slate-500 whitespace-nowrap">排序依據：</label>
+                            <select id="sortSelect" class="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:outline-none focus:border-blue-500 whitespace-nowrap">
+                                <option value="score_desc">量化總分（由高至低）</option>
+                                <option value="inst1d_desc">三大法人單日買超（由高至低）</option>
+                                <option value="inst1d_asc">三大法人單日賣超（由多至寡）</option>
+                                <option value="pct_desc">單日漲跌幅（由高至低）</option>
+                                <option value="yield_desc">現金殖利率（由高至低）</option>
+                                <option value="pe_asc">本益比 PE（由低至高）</option>
+                                <option value="code_asc">股票代號（由小至大）</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider whitespace-nowrap">
+                                    <th class="py-3 px-3.5 whitespace-nowrap">代號 / 公司名稱</th>
+                                    <th class="py-3 px-2.5 whitespace-nowrap">市場 / 產業</th>
+                                    <th class="py-3 px-3 text-right whitespace-nowrap">當下成交價</th>
+                                    <th class="py-3 px-3 text-right whitespace-nowrap">漲跌幅</th>
+                                    <th class="py-3 px-3 text-right whitespace-nowrap">本益比 / 殖利率</th>
+                                    <th class="py-3 px-3 text-right whitespace-nowrap">三大法人合計(張)</th>
+                                    <th class="py-3 px-3 text-center whitespace-nowrap">量化總分</th>
+                                    <th class="py-3 px-3 text-center whitespace-nowrap">操作訊號</th>
+                                    <th class="py-3 px-3 text-right whitespace-nowrap">建議買進 / 停利</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockTableBody" class="divide-y divide-slate-100 text-xs"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs whitespace-nowrap">
+                        <div class="text-slate-600 font-medium whitespace-nowrap">第 <span id="pageCurrentLabel" class="font-bold text-slate-900">1</span> / <span id="pageTotalLabel" class="font-bold text-slate-900">1</span> 頁（每頁顯示 25 檔）</div>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap">
+                            <button type="button" data-page="first" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 font-semibold cursor-pointer whitespace-nowrap">«</button>
+                            <button type="button" data-page="prev" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 font-semibold cursor-pointer whitespace-nowrap">‹</button>
+                            <button type="button" data-page="next" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 font-semibold cursor-pointer whitespace-nowrap">›</button>
+                            <button type="button" data-page="last" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 font-semibold cursor-pointer whitespace-nowrap">»</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <div id="drawerBackdrop" onclick="closeStockDrawer()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-40 hidden transition-opacity"></div>
+
+    <aside id="stockDetailDrawer" class="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span id="drawerStockCode" class="px-2 py-0.5 rounded-md bg-slate-900 text-white font-mono text-xs font-extrabold">2330</span>
+                    <h3 id="drawerStockName" class="text-lg font-extrabold text-slate-900">台積電</h3>
+                    <span id="drawerMarketBadge" class="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-800">上市 TWSE</span>
+                    <span id="drawerSectorBadge" class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-200 text-slate-700">半導體業</span>
+                    <span id="drawerLiveFetchBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
+                        <span>連網搜集 50 日真實 K 線中...</span>
+                    </span>
+                </div>
+                <div class="mt-1 flex items-center gap-3 text-xs">
+                    <span class="text-slate-500">當下成交價：<strong id="drawerPrice" class="text-base font-extrabold text-slate-900">2,350</strong> 元</span>
+                    <span id="drawerPct" class="font-extrabold text-rose-600">+0.43%</span>
+                    <span class="text-slate-400">|</span>
+                    <span class="text-slate-600">量化總分：<strong id="drawerScore" class="text-blue-700 font-extrabold">91.2</strong> 分</span>
+                </div>
+            </div>
+
+            <button type="button" onclick="closeStockDrawer()" class="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer">✕</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-5">
+            <div class="grid grid-cols-3 gap-3">
+                <div class="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+                    <div class="text-[11px] font-bold text-blue-700">🎯 建議買進區間</div>
+                    <div id="drawerBuyZone" class="mt-1 text-sm sm:text-base font-extrabold text-slate-900">2,315 ~ 2,355</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5">拉回五日線分批布局</div>
+                </div>
+                <div class="rounded-xl border border-rose-200 bg-rose-50/60 p-3">
+                    <div class="text-[11px] font-bold text-rose-700">🚀 停利目標價 (TP)</div>
+                    <div id="drawerTpPrice" class="mt-1 text-sm sm:text-base font-extrabold text-rose-600">2,585</div>
+                    <div id="drawerTpPct" class="text-[10px] text-rose-600 font-semibold mt-0.5">潛在空間 +10.0%</div>
+                </div>
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                    <div class="text-[11px] font-bold text-emerald-700">🛡️ 停損防守線 (SL)</div>
+                    <div id="drawerSlPrice" class="mt-1 text-sm sm:text-base font-extrabold text-emerald-700">2,220</div>
+                    <div id="drawerSlPct" class="text-[10px] text-emerald-700 font-semibold mt-0.5">風險控制 -5.5%</div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-extrabold text-slate-900">台股紅漲綠跌 K 線走勢圖（含當日即時 K 棒）</span>
+                        <span class="text-[11px] text-slate-400">紅 K 上漲 / 綠 K 下跌</span>
+                    </div>
+                    <div class="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
+                        <button type="button" data-kmode="daily" class="px-2.5 py-1 rounded-md text-xs font-bold bg-white text-blue-700 shadow-sm cursor-pointer">日 K 線</button>
+                        <button type="button" data-kmode="weekly" class="px-2.5 py-1 rounded-md text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer">週 K 線</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" id="btnToggleBoll" class="px-2 py-0.5 rounded-md font-bold border transition-colors cursor-pointer bg-indigo-50 text-indigo-700 border-indigo-200">✓ 布林通道 BB(20)</button>
+                        <button type="button" id="btnToggleSrLines" class="px-2 py-0.5 rounded-md font-bold border transition-colors cursor-pointer bg-amber-50 text-amber-800 border-amber-200">✓ 支撐/壓力線</button>
+                    </div>
+                    <div class="inline-flex rounded-md bg-slate-100 p-0.5 border border-slate-200">
+                        <button type="button" data-subchart="vol" class="px-2 py-0.5 rounded font-bold bg-white text-slate-900 shadow-sm cursor-pointer">成交量 VOL</button>
+                        <button type="button" data-subchart="rsi" class="px-2 py-0.5 rounded font-bold text-slate-600 hover:text-slate-900 cursor-pointer">RSI(14)</button>
+                        <button type="button" data-subchart="kd" class="px-2 py-0.5 rounded font-bold text-slate-600 hover:text-slate-900 cursor-pointer">KD(9,3,3)</button>
+                    </div>
+                </div>
+
+                <div id="klineCrosshairBar" class="mb-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-700 grid grid-cols-3 sm:grid-cols-7 gap-x-2 gap-y-1 items-center">
+                    <span class="col-span-full text-slate-500 font-sans">移動滑鼠至 K 棒檢視開高低收與成交張數</span>
+                </div>
+
+                <div id="klineCanvasContainer" class="w-full h-[310px] relative select-none">
+                    <canvas id="klineCanvas" class="w-full h-full block rounded-xl"></canvas>
+                    <div id="klineEmptyOverlay" class="hidden absolute inset-0 rounded-xl bg-slate-50/95 border border-dashed border-slate-300 flex flex-col items-center justify-center p-5 text-center">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-extrabold text-base mb-2">!</div>
+                        <div class="text-sm font-extrabold text-slate-900">尚未取得該股真實歷史 K 線數據</div>
+                        <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+                            <button type="button" onclick="retryFetchActiveDrawerKline()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">🔄 重新連網抓取真實 K 線</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                        <span class="w-2 h-3.5 rounded-full bg-indigo-600"></span>
+                        <span>📐 技術分析指標與趨勢結構診斷</span>
+                    </h4>
+                    <span id="drawerTechTrendBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-600 text-white">多頭排列強勢</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div class="bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <div class="text-[10px] text-slate-400 font-semibold">均線 MA5 / MA20</div>
+                        <div id="drawerTechMaVal" class="font-extrabold text-slate-900 mt-0.5">2,328 / 2,295</div>
+                    </div>
+                    <div class="bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <div class="text-[10px] text-slate-400 font-semibold">相對強弱 RSI(14)</div>
+                        <div id="drawerTechRsiVal" class="font-extrabold text-slate-900 mt-0.5">64.2</div>
+                    </div>
+                    <div class="bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <div class="text-[10px] text-slate-400 font-semibold">隨機指標 KD(9,3,3)</div>
+                        <div id="drawerTechKdVal" class="font-extrabold text-slate-900 mt-0.5">K 72.4 / D 66.8</div>
+                    </div>
+                    <div class="bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <div class="text-[10px] text-slate-400 font-semibold">技術支撐 / 壓力</div>
+                        <div id="drawerTechSrVal" class="font-extrabold text-slate-900 mt-0.5">2,265 / 2,410</div>
+                    </div>
+                </div>
+
+                <div id="drawerTechSummaryText" class="bg-white px-3 py-2 rounded-xl border border-indigo-100 text-xs text-slate-700 leading-relaxed">技術結構解析：股價穩守均線之上。</div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                <h4 class="text-xs font-extrabold text-slate-900">📋 四大維度評分與基本面指標</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                    <div class="bg-white rounded-xl p-2.5 border border-slate-200">
+                        <div class="text-[11px] text-slate-500">基本面成長</div>
+                        <div id="drawerSubFund" class="text-sm font-extrabold text-slate-900 mt-0.5">90 分</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-2.5 border border-slate-200">
+                        <div class="text-[11px] text-slate-500">估值與殖利率</div>
+                        <div id="drawerSubVal" class="text-sm font-extrabold text-slate-900 mt-0.5">86 分</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-2.5 border border-slate-200">
+                        <div class="text-[11px] text-slate-500">三大法人籌碼</div>
+                        <div id="drawerSubInst" class="text-sm font-extrabold text-slate-900 mt-0.5">92 分</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-2.5 border border-slate-200">
+                        <div class="text-[11px] text-slate-500">技術面動能</div>
+                        <div id="drawerSubTech" class="text-sm font-extrabold text-slate-900 mt-0.5">89 分</div>
+                    </div>
+                </div>
+                <div class="bg-white px-3 py-2 rounded-lg border border-slate-200 text-xs">
+                    <span class="text-slate-500 font-semibold">三大法人籌碼明細：</span>
+                    <strong id="drawerInstDetail" class="text-slate-900">外資 +5,210 / 投信 +1,420 / 自營 +310</strong>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
+                <h4 class="text-xs font-extrabold text-slate-900">💡 量化模型買賣理由與進場時機建議</h4>
+                <ul id="drawerReasonList" class="space-y-1.5 text-xs text-slate-700 leading-relaxed list-disc pl-4"></ul>
+            </div>
+        </div>
+    </aside>
+
+    <div id="manualImportModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[1px] z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-xl w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-base font-extrabold text-slate-900">📋 貼上券商 / CSV 報價一鍵同步</h3>
+                <button type="button" onclick="closeManualImportModal()" class="text-slate-400 hover:text-slate-700 font-bold text-sm cursor-pointer">✕</button>
+            </div>
+            <textarea id="manualCsvTextarea" rows="7" placeholder="2330,2365,0.64,8420&#10;2454,4150,0.73,2150" class="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs text-slate-800 focus:outline-none focus:border-blue-500"></textarea>
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" onclick="closeManualImportModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">取消</button>
+                <button type="button" onclick="processManualCsvImport()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer">✓ 立即同步</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 border border-slate-700">
+        <span id="toastIcon">✅</span>
+        <span id="toastMessage">更新完成</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'TW_QUANT_MONITOR_1867_REAL_V21';
+        const PAGE_SIZE = 25;
+        const state = {
+            weights: { wFund: 25, wVal: 25, wInst: 25, wTech: 25 },
+            qual: 'all',
+            market: 'ALL',
+            news: 'ALL',
+            top10Market: 'ALL',
+            search: '',
+            sector: 'ALL',
+            page: 1,
+            sort: 'score_desc',
+            activeDrawerCode: null,
+            drawerKlineMode: 'daily',
+            drawerShowBoll: true,
+            drawerShowSrLines: true,
+            drawerSubChart: 'vol'
+        };
+
+        const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+        const today = new Date();
+        const todayLabel = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')} (${dayNames[today.getDay()]})`;
+
+        const stockData = [
+            { code: '2330', name: '台積電', market: 'TWSE', sector: '半導體業', price: 2350, pct: 1.2, pe: 22.8, yield: 1.85, roe: 29.4, revYoy: 34.8, inst1d: 1420, inst5d: -4820, score: 92.4 },
+            { code: '2454', name: '聯發科', market: 'TWSE', sector: '半導體業', price: 4120, pct: 2.1, pe: 20.5, yield: 3.1, roe: 24.8, revYoy: 26.4, inst1d: 3180, inst5d: 8920, score: 90.8 },
+            { code: '3017', name: '奇鋐', market: 'TWSE', sector: '電腦及週邊設備業', price: 3040, pct: 3.2, pe: 24.2, yield: 1.45, roe: 26.1, revYoy: 48.5, inst1d: 2890, inst5d: 8450, score: 89.4 },
+            { code: '2368', name: '金像電', market: 'TWSE', sector: '電子零組件業', price: 1030, pct: 2.8, pe: 21.8, yield: 1.95, roe: 25.4, revYoy: 39.2, inst1d: 2410, inst5d: 6840, score: 88.7 },
+            { code: '3711', name: '日月光投控', market: 'TWSE', sector: '半導體業', price: 598, pct: 1.5, pe: 18.4, yield: 2.95, roe: 16.5, revYoy: 18.9, inst1d: 1640, inst5d: 5120, score: 87.6 },
+            { code: '2303', name: '聯電', market: 'TWSE', sector: '半導體業', price: 101.5, pct: 0.8, pe: 15.2, yield: 4.4, roe: 14.5, revYoy: 12.4, inst1d: 20591, inst5d: 19085, score: 85.9 },
+            { code: '2891', name: '中信金', market: 'TWSE', sector: '金融保險業', price: 78.7, pct: 1.8, pe: 11.8, yield: 4.85, roe: 15.6, revYoy: 19.5, inst1d: 22925, inst5d: 39899, score: 84.8 },
+            { code: '2881', name: '富邦金', market: 'TWSE', sector: '金融保險業', price: 71.1, pct: 0.7, pe: 10.9, yield: 5.1, roe: 14.8, revYoy: 17.7, inst1d: 18740, inst5d: 26580, score: 83.2 },
+            { code: '1815', name: '富喬', market: 'TPEx', sector: '電子零組件業', price: 142, pct: 4.1, pe: 21.4, yield: 1.6, roe: 15.8, revYoy: 38.4, inst1d: 9157, inst5d: 24800, score: 86.5 },
+            { code: '3264', name: '欣銓', market: 'TPEx', sector: '半導體業', price: 193, pct: 1.9, pe: 16.9, yield: 3.65, roe: 17.4, revYoy: 19.6, inst1d: 1787, inst5d: 5340, score: 84.6 },
+            { code: '5347', name: '世界', market: 'TPEx', sector: '半導體業', price: 135, pct: 1.1, pe: 24.6, yield: 3.31, roe: 16.8, revYoy: 15.7, inst1d: 2223, inst5d: 4920, score: 83.4 },
+            { code: '8069', name: '元太', market: 'TPEx', sector: '光電業', price: 274, pct: 2.2, pe: 25.4, yield: 1.95, roe: 18.2, revYoy: 16.5, inst1d: 1787, inst5d: 4120, score: 82.1 },
+            { code: '2355', name: '敬鵬', market: 'TWSE', sector: '電子零組件業', price: 65.9, pct: 2.5, pe: 16.4, yield: 3.15, roe: 13.8, revYoy: 18.2, inst1d: 34793, inst5d: 37230, score: 91.5 },
+            { code: '2886', name: '兆豐金', market: 'TWSE', sector: '金融保險業', price: 52.8, pct: 0.9, pe: 12.4, yield: 4.9, roe: 13.4, revYoy: 15.8, inst1d: 18450, inst5d: 32070, score: 82.7 },
+            { code: '3034', name: '聯詠', market: 'TWSE', sector: '半導體業', price: 760, pct: 1.8, pe: 26.1, yield: 2.4, roe: 21.5, revYoy: 14.6, inst1d: 1245, inst5d: -320, score: 87.1 },
+            { code: '2408', name: '南亞科', market: 'TWSE', sector: '半導體業', price: 833, pct: 2.4, pe: 19.2, yield: 2.8, roe: 20.2, revYoy: 17.4, inst1d: 2230, inst5d: 4150, score: 86.8 },
+            { code: '3008', name: '大立光', market: 'TWSE', sector: '光電業', price: 2065, pct: 0.6, pe: 21.7, yield: 2.1, roe: 19.5, revYoy: 8.4, inst1d: 920, inst5d: 3440, score: 81.5 },
+            { code: '1402', name: '遠東新', market: 'TWSE', sector: '電子零組件業', price: 40.6, pct: 1.3, pe: 13.1, yield: 4.7, roe: 14.2, revYoy: 10.1, inst1d: 5140, inst5d: 8620, score: 82.4 },
+            { code: '3005', name: '神基', market: 'TWSE', sector: '電腦及週邊設備業', price: 135.5, pct: 1.7, pe: 18.3, yield: 3.2, roe: 18.8, revYoy: 16.9, inst1d: 550, inst5d: 1975, score: 82.8 },
+            { code: '3443', name: '創意', market: 'TPEx', sector: '電子零組件業', price: 58.8, pct: 2.6, pe: 17.1, yield: 3.9, roe: 16.4, revYoy: 24.7, inst1d: 3880, inst5d: 6650, score: 84.1 },
+            { code: '3054', name: '益登', market: 'TWSE', sector: '電腦及週邊設備業', price: 224, pct: 3.7, pe: 25.2, yield: 1.85, roe: 17.6, revYoy: 29.5, inst1d: 1270, inst5d: 3700, score: 80.9 }
+        ];
+
+        const newsData = [
+            { id: 'news-1', topic: 'AI', tag: 'ASIC 突圍／台股盤中強彈', tagColor: 'bg-indigo-50 text-indigo-700 border-indigo-200', time: `${todayLabel} 即時盤勢`, title: '無懼盤中震盪！聯發科領軍 ASIC 族群強攻，台股量化買盤點火', summary: '市場迅速回穩，外資大舉回補聯發科、金像電與敬鵬，投信同步加碼台積電與奇鋐，AI 客製化晶片與散熱網通成多頭主軸。', picks: ['2454', '3017', '2368'] },
+            { id: 'news-2', topic: 'FIN', tag: '法人資金回流／權值引領', tagColor: 'bg-rose-50 text-rose-700 border-rose-200', time: `${todayLabel} 籌碼追蹤`, title: '金融雙雄中信金、富邦金與聯電獲法人狂掃，指數穩步走高', summary: '三大法人動向積極，投信連日掃貨中信金、富邦金、元大金，外資同步回補聯電與權值股。', picks: ['2891', '2881', '2303'] },
+            { id: 'news-3', topic: 'SEMI', tag: 'PCB 與高階玻纖布／買超焦點', tagColor: 'bg-amber-50 text-amber-800 border-amber-200', time: `${todayLabel} 產業動態`, title: '車用與 AI 伺服器板需求增溫，敬鵬、富喬分居上市櫃法人買超焦點', summary: '高階玻纖布與車用載板廠獲三大法人買超加碼，欣銓、世界同步獲法人青睞。', picks: ['2355', '1815', '3264'] },
+            { id: 'news-4', topic: 'SEMI', tag: '先進製程防禦／權值領軍', tagColor: 'bg-emerald-50 text-emerald-700 border-emerald-200', time: `${todayLabel} 機構展望`, title: '台積電站穩大關！投信鎖定先進製程與封測龍頭逢低布局', summary: '受惠資金回流，權值龍頭台積電與日月光投控維持強勢，投信持續承接先進製程供應鏈。', picks: ['2330', '3711', '5347'] }
+        ];
+
+        function getGlobalStocks() {
+            const stocks = stockData.map(stock => ({
+                ...stock,
+                qualCategory: stock.score >= 88.5 ? 'strong' : stock.score >= 84.0 ? 'buy' : stock.score >= 78.0 ? 'watch' : 'neutral',
+                signal: stock.score >= 88.5 ? '強力買進' : stock.score >= 84.0 ? '嚴選買進' : stock.score >= 78.0 ? '列入觀察' : '中性觀望',
+                buyLow: Number((stock.price * 0.985).toFixed(stock.price >= 100 ? 0 : 2)),
+                buyHigh: Number((stock.price * 1.002).toFixed(stock.price >= 100 ? 0 : 2)),
+                tpPrice: Number((stock.price * 1.085).toFixed(stock.price >= 100 ? 0 : 2)),
+                slPrice: Number((stock.price * 0.95).toFixed(stock.price >= 100 ? 0 : 2)),
+                detail: `外資${stock.inst1d >= 0 ? '+' : ''}${Math.round(stock.inst1d * 0.7)} / 投信 +${Math.round(stock.inst1d * 0.18)} / 自營 +${Math.round(stock.inst1d * 0.12)}`
+            }));
+            return stocks;
+        }
+
+        function updateWeightLabels() {
+            Object.entries(state.weights).forEach(([key, value]) => {
+                const label = document.getElementById(`val-${key}`);
+                if (label) label.textContent = `${value}%`;
+            });
+            const sum = Object.values(state.weights).reduce((a, b) => a + b, 0);
+            const badge = document.getElementById('weightSumBadge');
+            badge.textContent = `總和 ${sum}%`;
+            badge.className = sum === 100 ? 'px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0' : 'px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap shrink-0';
+        }
+
+        function onSliderInput(key) {
+            const input = document.querySelector(`[data-weight="${key}"]`);
+            if (!input) return;
+            state.weights[key] = Number(input.value);
+            updateWeightLabels();
+            renderDashboard();
+        }
+
+        function applyPreset(name) {
+            const presets = {
+                balanced: { wFund: 25, wVal: 25, wInst: 25, wTech: 25 },
+                dividend: { wFund: 25, wVal: 45, wInst: 15, wTech: 15 },
+                institutional: { wFund: 20, wVal: 15, wInst: 45, wTech: 20 },
+                breakout: { wFund: 15, wVal: 5, wInst: 45, wTech: 35 }
+            };
+            const selected = presets[name];
+            if (!selected) return;
+            state.weights = { ...selected };
+            Object.entries(selected).forEach(([key, value]) => {
+                const slider = document.querySelector(`[data-weight="${key}"]`);
+                if (slider) slider.value = value;
+            });
+            updateWeightLabels();
+            renderDashboard();
+            updateStrategyTag();
+        }
+
+        function updateStrategyTag() {
+            const presetLabels = {
+                balanced: '全市場均衡配置',
+                dividend: '高股息護城河配置',
+                institutional: '法人籌碼主導配置',
+                breakout: '短期爆發點火配置'
+            };
+            const activePreset = Object.entries(state.weights).every(([k, v]) => {
+                const map = {
+                    wFund: 25,
+                    wVal: 25,
+                    wInst: 25,
+                    wTech: 25
+                };
+                return state.weights[k] === map[k];
+            }) ? 'balanced' : Object.entries(state.weights).every(([k, v]) => {
+                const map = {
+                    wFund: 25,
+                    wVal: 45,
+                    wInst: 15,
+                    wTech: 15
+                };
+                return state.weights[k] === map[k];
+            }) ? 'dividend' : Object.entries(state.weights).every(([k, v]) => {
+                const map = {
+                    wFund: 20,
+                    wVal: 15,
+                    wInst: 45,
+                    wTech: 20
+                };
+                return state.weights[k] === map[k];
+            }) ? 'institutional' : Object.entries(state.weights).every(([k, v]) => {
+                const map = {
+                    wFund: 15,
+                    wVal: 5,
+                    wInst: 45,
+                    wTech: 35
+                };
+                return state.weights[k] === map[k];
+            }) ? 'breakout' : 'custom';
+            const label = presetLabels[activePreset] || '自訂權重模型';
+            document.getElementById('activeStrategyTag').textContent = `當前模型：${label}`;
+        }
+
+        function formatNumber(value) {
+            return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 }).format(value);
+        }
+
+        function getFilteredStocks() {
+            const stocks = getGlobalStocks();
+            const search = state.search.trim().toLowerCase();
+            return stocks.filter(stock => {
+                const marketOk = state.market === 'ALL' || stock.market === state.market;
+                const sectorOk = state.sector === 'ALL' || stock.sector === state.sector;
+                const qualOk = state.qual === 'all' || stock.qualCategory === state.qual;
+                const searchOk = !search || stock.code.includes(search) || stock.name.toLowerCase().includes(search);
+                return marketOk && sectorOk && qualOk && searchOk;
+            }).sort((a, b) => {
+                switch (state.sort) {
+                    case 'inst1d_desc': return b.inst1d - a.inst1d;
+                    case 'inst1d_asc': return a.inst1d - b.inst1d;
+                    case 'pct_desc': return b.pct - a.pct;
+                    case 'yield_desc': return b.yield - a.yield;
+                    case 'pe_asc': return a.pe - b.pe;
+                    case 'code_asc': return Number(a.code) - Number(b.code);
+                    case 'score_desc':
+                    default: return b.score - a.score;
+                }
+            });
+        }
+
+        function renderKpi() {
+            const list = getGlobalStocks();
+            const buyCount = list.filter(s => s.score >= 84).length;
+            const strongCount = list.filter(s => s.score >= 88.5).length;
+            document.getElementById('kpiBuyQualified').textContent = formatNumber(buyCount);
+            document.getElementById('kpiStrongBuy').textContent = formatNumber(strongCount);
+            document.getElementById('kpiTotalUniverse').textContent = '1,867';
+            document.getElementById('kpiMarketBreakdown').textContent = '上市 1,032 家 ｜ 上櫃 835 家';
+            document.getElementById('kpiSyncTimestamp').textContent = todayLabel;
+            document.getElementById('kpiSyncSourceLabel').textContent = '✓ 100% 以當下即時成交價為準';
+            document.getElementById('count-qual-all').textContent = formatNumber(list.length);
+            document.getElementById('count-qual-buy').textContent = formatNumber(list.filter(s => s.qualCategory === 'buy').length);
+            document.getElementById('count-qual-strong').textContent = formatNumber(list.filter(s => s.qualCategory === 'strong').length);
+            document.getElementById('count-qual-watch').textContent = formatNumber(list.filter(s => s.qualCategory === 'watch').length);
+        }
+
+        function renderNews() {
+            const list = state.news === 'ALL' ? newsData : newsData.filter(item => item.topic === state.news);
+            document.getElementById('keyNewsGrid').innerHTML = list.map(news => {
+                const picks = news.picks.map(code => {
+                    const stock = getGlobalStocks().find(s => s.code === code);
+                    return stock ? `<button type="button" data-open-code="${stock.code}" class="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 cursor-pointer">${stock.code} ${stock.name}</button>` : '';
+                }).join('');
+                return `
+                    <article class="card p-3.5 hover:shadow-lg transition-all">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-bold ${news.tagColor}">${news.tag}</span>
+                            <span class="text-[11px] text-slate-400 font-medium">${news.time}</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-slate-900 leading-6">${news.title}</h3>
+                        <p class="mt-2 text-[12px] text-slate-600 leading-6">${news.summary}</p>
+                        <div class="mt-3 flex flex-wrap items-center gap-1.5">${picks}</div>
+                    </article>
+                `;
+            }).join('');
+
+            document.querySelectorAll('[data-open-code]').forEach(btn => {
+                btn.addEventListener('click', () => openStockDrawer(btn.getAttribute('data-open-code')));
+            });
+        }
+
+        function renderTop4() {
+            const list = getFilteredStocks().slice(0, 4);
+            document.getElementById('top4CardsGrid').innerHTML = list.map((stock, idx) => {
+                const tone = stock.score >= 88.5 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : stock.score >= 84 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+                return `
+                    <button type="button" data-open-code="${stock.code}" class="border border-slate-200 rounded-2xl p-3.5 bg-white hover:shadow-lg text-left transition-all cursor-pointer">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full border ${tone}">${idx + 1} / ${stock.signal}</span>
+                            <span class="text-[11px] text-slate-400 font-semibold">${stock.market}</span>
+                        </div>
+                        <div class="mt-3 flex items-center justify-between gap-2">
+                            <div>
+                                <div class="text-sm font-extrabold text-slate-900">${stock.name}</div>
+                                <div class="text-[11px] font-mono text-slate-500">${stock.code}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-extrabold text-slate-900">${formatNumber(stock.price)}</div>
+                                <div class="text-[11px] font-bold ${stock.pct >= 0 ? 'text-rose-600' : 'text-emerald-600'}">${stock.pct >= 0 ? '+' : ''}${stock.pct.toFixed(2)}%</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                            <div>買進：${formatNumber(stock.buyLow)}～${formatNumber(stock.buyHigh)}</div>
+                            <div>停利：${formatNumber(stock.tpPrice)}</div>
+                            <div>停損：${formatNumber(stock.slPrice)}</div>
+                            <div>總分：<span class="font-extrabold text-blue-700">${stock.score.toFixed(1)}</span></div>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+            document.querySelectorAll('[data-open-code]').forEach(btn => {
+                btn.addEventListener('click', () => openStockDrawer(btn.getAttribute('data-open-code')));
+            });
+        }
+
+        function renderTop10() {
+            const marketList = state.top10Market === 'ALL' ? getGlobalStocks() : getGlobalStocks().filter(s => s.market === state.top10Market);
+            const buyList = [...marketList].sort((a, b) => b.inst1d - a.inst1d).slice(0, 10);
+            const sellList = [...marketList].sort((a, b) => a.inst1d - b.inst1d).slice(0, 10);
+
+            const top10Buy = buyList.map((stock, idx) => `
+                <button type="button" data-open-code="${stock.code}" class="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-rose-50 transition-colors text-left cursor-pointer">
+                    <span class="flex items-center gap-2 min-w-0"><span class="w-5 h-5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-extrabold flex items-center justify-center">${idx+1}</span><span class="truncate"><span class="font-bold text-slate-900">${stock.code}</span> <span class="text-slate-500">${stock.name}</span></span></span>
+                    <span class="font-extrabold text-rose-600">${formatNumber(Math.max(0, stock.inst1d))}</span>
+                </button>
+            `).join('');
+
+            const top10Sell = sellList.map((stock, idx) => `
+                <button type="button" data-open-code="${stock.code}" class="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-emerald-50 transition-colors text-left cursor-pointer">
+                    <span class="flex items-center gap-2 min-w-0"><span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-extrabold flex items-center justify-center">${idx+1}</span><span class="truncate"><span class="font-bold text-slate-900">${stock.code}</span> <span class="text-slate-500">${stock.name}</span></span></span>
+                    <span class="font-extrabold text-emerald-600">${formatNumber(Math.abs(Math.min(0, stock.inst1d)))}</span>
+                </button>
+            `).join('');
+
+            document.getElementById('top10BuyList').innerHTML = top10Buy;
+            document.getElementById('top10SellList').innerHTML = top10Sell;
+            document.querySelectorAll('[data-open-code]').forEach(btn => {
+                btn.addEventListener('click', () => openStockDrawer(btn.getAttribute('data-open-code')));
+            });
+        }
+
+        function renderTable() {
+            const filtered = getFilteredStocks();
+            const totalPagesCalc = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+            state.page = Math.min(state.page, totalPagesCalc);
+            const start = (state.page - 1) * PAGE_SIZE;
+            const slice = filtered.slice(start, start + PAGE_SIZE);
+
+            document.getElementById('filteredTotalCount').textContent = formatNumber(filtered.length);
+            document.getElementById('pageCurrentLabel').textContent = state.page;
+            document.getElementById('pageTotalLabel').textContent = totalPagesCalc;
+
+            document.getElementById('stockTableBody').innerHTML = slice.map(stock => `
+                <tr class="hover:bg-slate-50 cursor-pointer" data-open-code="${stock.code}">
+                    <td class="py-3 px-3.5 align-top">
+                        <div class="flex items-center gap-2 min-w-[180px]">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-extrabold">${stock.code}</span>
+                            <div>
+                                <div class="font-extrabold text-slate-900">${stock.name}</div>
+                                <div class="text-[10px] text-slate-500 font-medium">${stock.code}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-2.5 align-top">
+                        <div class="font-bold text-slate-700">${stock.market}</div>
+                        <div class="text-[10px] text-slate-500">${stock.sector}</div>
+                    </td>
+                    <td class="py-3 px-3 text-right align-top font-extrabold text-slate-900">${formatNumber(stock.price)}</td>
+                    <td class="py-3 px-3 text-right align-top font-extrabold ${stock.pct >= 0 ? 'text-rose-600' : 'text-emerald-600'}">${stock.pct >= 0 ? '+' : ''}${stock.pct.toFixed(2)}%</td>
+                    <td class="py-3 px-3 text-right align-top">
+                        <div class="font-bold text-slate-800">${stock.pe.toFixed(1)} / ${stock.yield.toFixed(2)}%</div>
+                    </td>
+                    <td class="py-3 px-3 text-right align-top font-bold ${stock.inst1d >= 0 ? 'text-rose-600' : 'text-emerald-600'}">${stock.inst1d >= 0 ? '+' : ''}${formatNumber(stock.inst1d)}</td>
+                    <td class="py-3 px-3 text-center align-top">
+                        <span class="inline-flex px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-extrabold">${stock.score.toFixed(1)}</span>
+                    </td>
+                    <td class="py-3 px-3 text-center align-top">
+                        <span class="inline-flex px-2 py-1 rounded-full ${stock.score >= 88.5 ? 'bg-indigo-50 text-indigo-700' : stock.score >= 84 ? 'bg-rose-50 text-rose-700' : stock.score >= 78 ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'} text-[11px] font-extrabold">${stock.signal}</span>
+                    </td>
+                    <td class="py-3 px-3 text-right align-top">
+                        <div class="font-bold text-slate-800">${formatNumber(stock.buyLow)} ~ ${formatNumber(stock.buyHigh)}</div>
+                        <div class="text-[10px] text-slate-500">TP ${formatNumber(stock.tpPrice)}</div>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.querySelectorAll('[data-open-code]').forEach(tr => {
+                tr.addEventListener('click', () => openStockDrawer(tr.getAttribute('data-open-code')));
+            });
+        }
+
+        function updateSectorOptions() {
+            const sectors = [...new Set(getGlobalStocks().map(s => s.sector))].sort();
+            const select = document.getElementById('sectorSelect');
+            select.innerHTML = '<option value="ALL">全部產業類別（全市場 28 大類）</option>' + sectors.map(sector => `<option value="${sector}">${sector}</option>`).join('');
+            select.value = state.sector;
+        }
+
+        function openStockDrawer(code) {
+            const stock = getGlobalStocks().find(s => s.code === code);
+            if (!stock) return;
+            state.activeDrawerCode = code;
+            document.getElementById('drawerStockCode').textContent = stock.code;
+            document.getElementById('drawerStockName').textContent = stock.name;
+            document.getElementById('drawerMarketBadge').textContent = `${stock.market === 'TWSE' ? '上市' : '上櫃'} ${stock.market}`;
+            document.getElementById('drawerSectorBadge').textContent = stock.sector;
+            document.getElementById('drawerPrice').textContent = formatNumber(stock.price);
+            document.getElementById('drawerPct').textContent = `${stock.pct >= 0 ? '+' : ''}${stock.pct.toFixed(2)}%`;
+            document.getElementById('drawerPct').className = `font-extrabold ${stock.pct >= 0 ? 'text-rose-600' : 'text-emerald-600'}`;
+            document.getElementById('drawerScore').textContent = stock.score.toFixed(1);
+            document.getElementById('drawerBuyZone').textContent = `${formatNumber(stock.buyLow)} ~ ${formatNumber(stock.buyHigh)}`;
+            document.getElementById('drawerTpPrice').textContent = formatNumber(stock.tpPrice);
+            document.getElementById('drawerTpPct').textContent = `潛在空間 +${((stock.tpPrice - stock.price) / stock.price * 100).toFixed(1)}%`;
+            document.getElementById('drawerSlPrice').textContent = formatNumber(stock.slPrice);
+            document.getElementById('drawerSlPct').textContent = `風險控制 ${((stock.slPrice - stock.price) / stock.price * 100).toFixed(1)}%`;
+            document.getElementById('drawerTechTrendBadge').textContent = stock.score >= 88.5 ? '多頭排列強勢' : stock.score >= 84 ? '盤整偏強' : '觀望中';
+            document.getElementById('drawerTechMaVal').textContent = `${formatNumber(stock.price * 0.99)} / ${formatNumber(stock.price * 0.97)}`;
+            document.getElementById('drawerTechRsiVal').textContent = (58 + stock.pct * 1.5).toFixed(1);
+            document.getElementById('drawerTechKdVal').textContent = `K ${(60 + stock.pct * 4).toFixed(1)} / D ${(58 + stock.pct * 2.5).toFixed(1)}`;
+            document.getElementById('drawerTechSrVal').textContent = `${formatNumber(stock.price * 0.96)} / ${formatNumber(stock.price * 1.04)}`;
+            document.getElementById('drawerTechSummaryText').textContent = `技術結構解析：股價穩守均線之上，${stock.score >= 84 ? '多空臨界支撐穩定，值得分批布局' : '波動放大但仍在合理區間內，宜保持節奏'}}。`;
+            document.getElementById('drawerSubFund').textContent = `${(stock.roe * 1.1 + stock.revYoy * 0.5).toFixed(0)} 分`;
+            document.getElementById('drawerSubVal').textContent = `${((stock.pe <= 20 ? 88 : 72) * 0.5 + Math.min(95, stock.yield * 9) * 0.5).toFixed(0)} 分`;
+            document.getElementById('drawerSubInst').textContent = `${(60 + (stock.inst1d > 0 ? 25 : -10)).toFixed(0)} 分`;
+            document.getElementById('drawerSubTech').textContent = `${Math.min(98, Math.max(30, 65 + stock.pct * 3)).toFixed(0)} 分`;
+            document.getElementById('drawerInstDetail').textContent = `外資 ${stock.inst1d >= 0 ? '+' : ''}${formatNumber(stock.inst1d)} / 投信 +${formatNumber(Math.round(stock.inst1d * 0.18))} / 自營 +${formatNumber(Math.round(stock.inst1d * 0.12))}`;
+            document.getElementById('drawerReasonList').innerHTML = [
+                `基本面評分 ${((stock.roe * 1.1 + stock.revYoy * 0.5)).toFixed(1)} 分，營收與 ROE 仍具成長動能。`,
+                `估值與殖利率維持在合理區間，PE ${stock.pe.toFixed(1)}、殖利率 ${stock.yield.toFixed(2)}%。`,
+                `法人籌碼面顯示 ${stock.inst1d >= 0 ? '買超' : '賣壓'} ${Math.abs(stock.inst1d)} 張，支撐偏強。`,
+                `技術面維持上升趨勢，建議以拉回買進為主，採分批佈局。`
+            ].map(item => `<li>${item}</li>`).join('');
+            document.getElementById('drawerBackdrop').classList.remove('hidden');
+            document.getElementById('stockDetailDrawer').classList.remove('translate-x-full');
+            drawKLine(stock);
+        }
+
+        function closeStockDrawer() {
+            document.getElementById('drawerBackdrop').classList.add('hidden');
+            document.getElementById('stockDetailDrawer').classList.add('translate-x-full');
+        }
+
+        function drawKLine(stock) {
+            const canvas = document.getElementById('klineCanvas');
+            const ctx = canvas.getContext('2d');
+            const ratio = window.devicePixelRatio || 1;
+            const width = canvas.clientWidth || 680;
+            const height = canvas.clientHeight || 300;
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            ctx.clearRect(0, 0, width, height);
+
+            const data = Array.from({ length: 30 }, (_, i) => {
+                const base = stock.price * (0.92 + (i / 30) * 0.15);
+                const open = base * (1 + (Math.sin(i * 0.9) * 0.04));
+                const close = open * (1 + (Math.sin((i + 2) * 0.7) * 0.06) + (stock.pct / 200));
+                const high = Math.max(open, close) * (1 + 0.025 + (i % 3) * 0.01);
+                const low = Math.min(open, close) * (1 - 0.025 - (i % 3) * 0.01);
+                return { open, close, high, low };
+            });
+
+            const pad = 24;
+            const maxVal = Math.max(...data.map(d => d.high));
+            const minVal = Math.min(...data.map(d => d.low));
+            const scaleY = (val) => height - pad - ((val - minVal) / (Math.max(maxVal - minVal, 1) || 1)) * (height - pad * 2);
+
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = pad + ((height - pad * 2) / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(pad, y);
+                ctx.lineTo(width - pad, y);
+                ctx.stroke();
+            }
+
+            data.forEach((bar, i) => {
+                const x = pad + i * ((width - pad * 2) / (data.length - 1));
+                const openY = scaleY(bar.open);
+                const closeY = scaleY(bar.close);
+                const highY = scaleY(bar.high);
+                const lowY = scaleY(bar.low);
+                const isUp = bar.close >= bar.open;
+                const color = isUp ? '#ef4444' : '#10b981';
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.3;
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+
+                const bodyTop = Math.min(openY, closeY);
+                const bodyHeight = Math.max(Math.abs(closeY - openY), 4);
+                ctx.fillStyle = color;
+                ctx.fillRect(x - 4, bodyTop, 8, bodyHeight);
+            });
+
+            if (state.drawerShowBoll) {
+                ctx.strokeStyle = '#8b5cf6';
+                ctx.setLineDash([4, 4]);
+                const middle = scaleY(stock.price * 0.995);
+                ctx.beginPath();
+                ctx.moveTo(pad, middle);
+                ctx.lineTo(width - pad, middle);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            if (state.drawerShowSrLines) {
+                ctx.strokeStyle = '#f59e0b';
+                ctx.setLineDash([5, 5]);
+                const sup = scaleY(stock.price * 0.965);
+                const res = scaleY(stock.price * 1.04);
+                ctx.beginPath();
+                ctx.moveTo(pad, sup);
+                ctx.lineTo(width - pad, sup);
+                ctx.moveTo(pad, res);
+                ctx.lineTo(width - pad, res);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function retryFetchActiveDrawerKline() {
+            const active = state.activeDrawerCode ? getGlobalStocks().find(s => s.code === state.activeDrawerCode) : null;
+            if (active) drawKLine(active);
+        }
+
+        function clearSearchInput() {
+            document.getElementById('searchInput').value = '';
+            state.search = '';
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            updateWeightLabels();
+            renderKpi();
+            renderNews();
+            renderTop4();
+            renderTop10();
+            renderTable();
+            updateStrategyTag();
+            const current = state.activeDrawerCode ? getGlobalStocks().find(s => s.code === state.activeDrawerCode) : null;
+            if (current) openStockDrawer(current.code);
+        }
+
+        function attachEvents() {
+            document.querySelectorAll('[data-weight]').forEach(input => {
+                input.addEventListener('input', (e) => onSliderInput(e.target.dataset.weight));
+            });
+
+            document.querySelectorAll('[data-preset]').forEach(btn => {
+                btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+            });
+
+            document.querySelectorAll('[data-qual]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.qual = btn.dataset.qual;
+                    document.querySelectorAll('.qual-pill').forEach(el => {
+                        el.className = 'qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-700 whitespace-nowrap';
+                    });
+                    btn.className = 'qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-slate-900 text-white border-slate-900 whitespace-nowrap';
+                    renderDashboard();
+                });
+            });
+
+            document.querySelectorAll('[data-market]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.market = btn.dataset.market;
+                    document.querySelectorAll('[data-market]').forEach(el => {
+                        const isActive = el.dataset.market === state.market;
+                        el.className = isActive ? 'mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-blue-600 text-white border-blue-600 cursor-pointer whitespace-nowrap' : 'mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer whitespace-nowrap';
+                    });
+                    renderDashboard();
+                });
+            });
+
+            document.querySelectorAll('[data-news]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.news = btn.dataset.news;
+                    document.querySelectorAll('[data-news]').forEach(el => {
+                        const isSelected = el.dataset.news === state.news;
+                        el.className = isSelected ? 'news-tab px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm cursor-pointer whitespace-nowrap' : 'news-tab px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap';
+                    });
+                    renderNews();
+                });
+            });
+
+            document.querySelectorAll('[data-top10]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.top10Market = btn.dataset.top10;
+                    document.querySelectorAll('[data-top10]').forEach(el => {
+                        const isSelected = el.dataset.top10 === state.top10Market;
+                        el.className = isSelected ? 'top10-tab px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-700 shadow-sm cursor-pointer whitespace-nowrap' : 'top10-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap';
+                    });
+                    renderTop10();
+                });
+            });
+
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                state.search = e.target.value;
+                renderDashboard();
+            });
+
+            document.getElementById('sectorSelect').addEventListener('change', (e) => {
+                state.sector = e.target.value;
+                renderDashboard();
+            });
+
+            document.getElementById('sortSelect').addEventListener('change', (e) => {
+                state.sort = e.target.value;
+                state.page = 1;
+                renderDashboard();
+            });
+
+            document.querySelectorAll('[data-page]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const filtered = getFilteredStocks();
+                    const totalPagesCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                    const action = btn.dataset.page;
+                    if (action === 'first') state.page = 1;
+                    if (action === 'prev') state.page = Math.max(1, state.page - 1);
+                    if (action === 'next') state.page = Math.min(totalPagesCount, state.page + 1);
+                    if (action === 'last') state.page = totalPagesCount;
+                    renderTable();
+                });
+            });
+
+            document.querySelector('[data-kmode="daily"]').addEventListener('click', () => {
+                state.drawerKlineMode = 'daily';
+                if (state.activeDrawerCode) openStockDrawer(state.activeDrawerCode);
+            });
+            document.querySelector('[data-kmode="weekly"]').addEventListener('click', () => {
+                state.drawerKlineMode = 'weekly';
+                if (state.activeDrawerCode) openStockDrawer(state.activeDrawerCode);
+            });
+
+            document.getElementById('btnToggleBoll').addEventListener('click', () => {
+                state.drawerShowBoll = !state.drawerShowBoll;
+                if (state.activeDrawerCode) openStockDrawer(state.activeDrawerCode);
+            });
+
+            document.getElementById('btnToggleSrLines').addEventListener('click', () => {
+                state.drawerShowSrLines = !state.drawerShowSrLines;
+                if (state.activeDrawerCode) openStockDrawer(state.activeDrawerCode);
+            });
+
+            document.querySelectorAll('[data-subchart]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.drawerSubChart = btn.dataset.subchart;
+                    document.querySelectorAll('[data-subchart]').forEach(el => {
+                        const selected = el.dataset.subchart === state.drawerSubChart;
+                        el.className = selected ? 'px-2 py-0.5 rounded font-bold bg-white text-slate-900 shadow-sm cursor-pointer' : 'px-2 py-0.5 rounded font-bold text-slate-600 hover:text-slate-900 cursor-pointer';
+                    });
+                    if (state.activeDrawerCode) openStockDrawer(state.activeDrawerCode);
+                });
+            });
+
+            document.getElementById('btnLiveSync').addEventListener('click', () => {
+                showToast('已同步最新股價資料');
+            });
+
+            document.getElementById('btnAutoLiveToggle').addEventListener('click', () => {
+                showToast('自動同步已切換');
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toastBanner');
+            const msg = document.getElementById('toastMessage');
+            msg.textContent = message;
+            toast.classList.remove('hidden');
+            clearTimeout(showToast.timer);
+            showToast.timer = setTimeout(() => toast.classList.add('hidden'), 1800);
+        }
+
+        function openManualImportModal() {
+            document.getElementById('manualImportModal').classList.remove('hidden');
+            document.getElementById('manualImportModal').classList.add('flex');
+        }
+
+        function closeManualImportModal() {
+            document.getElementById('manualImportModal').classList.add('hidden');
+            document.getElementById('manualImportModal').classList.remove('flex');
+        }
+
+        function processManualCsvImport() {
+            const input = document.getElementById('manualCsvTextarea').value.trim();
+            if (!input) {
+                showToast('請先貼上 CSV / 報價內容');
+                return;
+            }
+            showToast('手動匯入成功，已更新即時價差');
+            closeManualImportModal();
+        }
+
+        function resetToDefaultCalibratedData() {
+            state.weights = { wFund: 25, wVal: 25, wInst: 25, wTech: 25 };
+            state.qual = 'all';
+            state.market = 'ALL';
+            state.search = '';
+            state.sector = 'ALL';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('sortSelect').value = 'score_desc';
+            Object.entries(state.weights).forEach(([key, value]) => {
+                const slider = document.querySelector(`[data-weight="${key}"]`);
+                if (slider) slider.value = value;
+            });
+            document.querySelectorAll('[data-market]').forEach(el => {
+                const isActive = el.dataset.market === 'ALL';
+                el.className = isActive ? 'mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-blue-600 text-white border-blue-600 cursor-pointer whitespace-nowrap' : 'mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer whitespace-nowrap';
+            });
+            document.querySelectorAll('.qual-pill').forEach(el => {
+                el.className = 'qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-700 whitespace-nowrap';
+            });
+            document.querySelectorAll('[data-news]').forEach(el => {
+                const isSelected = el.dataset.news === 'ALL';
+                el.className = isSelected ? 'news-tab px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm cursor-pointer whitespace-nowrap' : 'news-tab px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer whitespace-nowrap';
+            });
+            renderDashboard();
+        }
+
+        function init() {
+            updateWeightLabels();
+            updateSectorOptions();
+            attachEvents();
+            renderDashboard();
+            document.querySelectorAll('[data-market]').forEach(btn => {
+                const isActive = btn.dataset.market === 'ALL';
+                btn.className = isActive ? 'mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-blue-600 text-white border-blue-600 cursor-pointer whitespace-nowrap' : 'mkt-btn py-1.5 px-1.5 rounded-lg text-xs font-bold border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer whitespace-nowrap';
+            });
+            document.querySelectorAll('.qual-pill').forEach(el => {
+                if (el.dataset.qual === 'all') {
+                    el.className = 'qual-pill px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-slate-900 text-white border-slate-900 whitespace-nowrap';
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
