@@ -2046,10 +2046,10 @@
                         stockMap.set(code, local);
                     }
 
-                    // 同步真實 K 線（僅採信與前收在 ±15% 內的真實序列）
+                    // 同步真實 K 線（一律以最新回報為準，不拿前一交易日基準價限制）
                     if (Array.isArray(remote.klines50d) && remote.klines50d.length > 0) {
                         const lastRemoteBar = remote.klines50d[remote.klines50d.length - 1];
-                        if (lastRemoteBar && isPlausibleTwStockPrice(local.baseClose, lastRemoteBar.c)) {
+                        if (lastRemoteBar && Number(lastRemoteBar.c) > 0) {
                             local.klines50d = remote.klines50d.slice(-50);
                             sanitizeRealKlineSeries(local);
                         }
@@ -2058,17 +2058,19 @@
                     if (Array.isArray(local.klines50d) && local.klines50d.length > 0) {
                         const lastBar = local.klines50d[local.klines50d.length - 1];
                         const prevBar = local.klines50d.length >= 2 ? local.klines50d[local.klines50d.length - 2] : null;
-                        if (lastBar && isPlausibleTwStockPrice(local.baseClose, lastBar.c)) {
+                        if (lastBar && lastBar.c > 0) {
                             local.price = lastBar.c;
+                            local.baseClose = prevBar && prevBar.c > 0 ? prevBar.c : lastBar.c;
                             if (prevBar && prevBar.c > 0) {
                                 local.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
-                            } else if (Number.isFinite(Number(remote.pct)) && Math.abs(Number(remote.pct)) <= 10.5) {
+                            } else if (Number.isFinite(Number(remote.pct))) {
                                 local.pct = Number(remote.pct);
                             }
                         }
-                    } else if (isPlausibleTwStockPrice(local.baseClose, remotePrice)) {
+                    } else if (remotePrice > 0) {
                         local.price = remotePrice;
-                        if (Number.isFinite(Number(remote.pct)) && Math.abs(Number(remote.pct)) <= 10.5) {
+                        local.baseClose = remotePrice;
+                        if (Number.isFinite(Number(remote.pct))) {
                             local.pct = Number(remote.pct);
                         }
                     }
@@ -2336,17 +2338,77 @@
                     }
                     if (parsed.length >= 5) {
                         const liveRegPrice = Number(meta?.regularMarketPrice);
-                        if (Number.isFinite(liveRegPrice) && liveRegPrice > 0 && isPlausibleTwStockPrice(rawStock.baseClose, liveRegPrice)) {
+                        if (Number.isFinite(liveRegPrice) && liveRegPrice > 0) {
                             const lastBar = parsed[parsed.length - 1];
                             lastBar.c = Number(liveRegPrice.toFixed(2));
                             lastBar.h = Math.max(lastBar.h, lastBar.c);
                             lastBar.l = Math.min(lastBar.l, lastBar.c);
                         }
-                        const lastClose = parsed[parsed.length - 1].c;
-                        if (isPlausibleTwStockPrice(rawStock.baseClose, lastClose)) {
-                            return { bars: parsed.slice(-50), source: "Yahoo Finance 技術分析真實日線" };
+                        return { bars: parsed.slice(-50), source: "Yahoo Finance 技術分析真實日線" };
+                    }
+                }
+            }
+
+            // 第二順位：FinMind 台灣股市開放資料庫（一律以最新回報為準）
+            try {
+                const fmUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${code}&start_date=${startDt}`;
+                const resp = await fetch(fmUrl);
+                if (resp.ok) {
+                    const fmJson = await resp.json();
+                    if (fmJson && Array.isArray(fmJson.data) && fmJson.data.length >= 5) {
+                        const parsed = fmJson.data
+                            .filter(r => Number(r.close) > 0)
+                            .map(r => ({
+                                d: String(r.date || "").slice(5).replace("-", "/"),
+                                o: Number(r.open) || Number(r.close),
+                                h: Number(r.max) || Number(r.close),
+                                l: Number(r.min) || Number(r.close),
+                                c: Number(r.close),
+                                v: Math.max(1, Math.round((Number(r.Trading_Volume) || 100000) / 1000))
+                            }));
+                        if (parsed.length >= 5) {
+                            return { bars: parsed.slice(-50), source: "FinMind 台股開放資料庫真實日線" };
                         }
                     }
+                }
+            } catch (_) {
+                // 進入證交所備援
+            }
+
+            // 第三順位：臺灣證券交易所 STOCK_DAY 近三個月逐日成交表
+            if (rawStock.market === "TWSE") {
+                const now = new Date();
+                const months = [];
+                for (let m = 2; m >= 0; m--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+                    months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}01`);
+                }
+                const combined = [];
+                for (const ym of months) {
+                    const twseUrl = `https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date=${ym}&stockNo=${code}&response=json`;
+                    const j = await fetchWithCorsFallback(twseUrl);
+                    if (j && Array.isArray(j.data)) {
+                        j.data.forEach(row => {
+                            const o = parseFloat(String(row[3] || "").replace(/,/g, ""));
+                            const h = parseFloat(String(row[4] || "").replace(/,/g, ""));
+                            const l = parseFloat(String(row[5] || "").replace(/,/g, ""));
+                            const c = parseFloat(String(row[6] || "").replace(/,/g, ""));
+                            const vShares = parseFloat(String(row[1] || "").replace(/,/g, ""));
+                            if (Number.isFinite(c) && c > 0) {
+                                combined.push({
+                                    d: String(row[0] || "").slice(4),
+                                    o: Number.isFinite(o) ? o : c,
+                                    h: Number.isFinite(h) ? h : c,
+                                    l: Number.isFinite(l) ? l : c,
+                                    c,
+                                    v: Math.max(1, Math.round((Number.isFinite(vShares) ? vShares : 100000) / 1000))
+                                });
+                            }
+                        });
+                    }
+                }
+                if (combined.length >= 5) {
+                    return { bars: combined.slice(-50), source: "臺灣證券交易所 STOCK_DAY 真實日線" };
                 }
             }
 
@@ -2516,11 +2578,10 @@
                 if (rawSt.klines50d.length > 0) {
                     const lastBar = rawSt.klines50d[rawSt.klines50d.length - 1];
                     const prevBar = rawSt.klines50d.length >= 2 ? rawSt.klines50d[rawSt.klines50d.length - 2] : null;
-                    if (isPlausibleTwStockPrice(rawSt.baseClose, lastBar.c)) {
-                        rawSt.price = lastBar.c;
-                        if (prevBar && prevBar.c > 0) {
-                            rawSt.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
-                        }
+                    rawSt.price = lastBar.c;
+                    rawSt.baseClose = prevBar && prevBar.c > 0 ? prevBar.c : lastBar.c;
+                    if (prevBar && prevBar.c > 0) {
+                        rawSt.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
                     }
                 }
                 saveDatabaseToLocalStorage();
