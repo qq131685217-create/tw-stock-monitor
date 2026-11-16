@@ -26,18 +26,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install requests
-
-      - name: 4. 執行台股全市場（上市＋上櫃）盤後數據爬蟲
+  
+      - name: 4. 執行台股全市場（上市＋上櫃）數據爬蟲
         run: python fetch_tw_all_market.py
-
+    
       - name: 5. 自動 Commit 並推播最新 tw_market_data.json
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add tw_market_data.json
           if git diff --staged --quiet; then
-            echo "今日資料無變動（可能為休市日），無需提交。"
+            echo "目前資料無變動（盤中尚未釋出新盤後檔或休市日），無需提交。"
           else
-            git commit -m "chore: 自動更新台股全市場盤後行情與三大法人數據 ($(TZ='Asia/Taipei' date +'%Y-%m-%d'))"
+            git commit -m "chore: 自動更新台股全市場行情與三大法人數據 ($(TZ='Asia/Taipei' date +'%Y-%m-%d %H:%M'))"
             git push
           fi
