@@ -86,9 +86,9 @@ def is_intraday_session(now_tw):
 
 def fetch_all_1867_current_prices(stocks_map, now_tw):
     """
-    核心模組：使用 GitHub Actions 實測 100% 暢通的免驗證通道抓取全市場 1,867 檔當下即時成交價
-    1. 通道一：FinMind 今日全市場日內快照（單次請求批量回傳當日已更新標的）
-    2. 通道二：Yahoo Finance v8 Chart（20 執行緒高速並發抓 regularMarketPrice，1,867 檔約 25 秒全數掃完）
+    核心模組：一律以當下即時回傳為準，不參考前一交易日價格做門檻限制
+    1. 通道一：FinMind 今日全市場日內快照（單次請求批量回傳當日最新行情）
+    2. 通道二：Yahoo Finance v8 Chart（20 執行緒高速並發抓 regularMarketPrice，無條件直接採信）
     """
     today_str = now_tw.strftime("%Y-%m-%d")
     today_mmdd = now_tw.strftime("%m/%d")
@@ -112,14 +112,13 @@ def fetch_all_1867_current_prices(stocks_map, now_tw):
                 live_p = safe_float(row.get("close"))
                 if live_p <= 0:
                     continue
-                prev_c = st["price"]
-                if prev_c > 0 and not (prev_c * 0.895 <= live_p <= prev_c * 1.105):
-                    continue
+                spread = safe_float(row.get("spread"))
+                ref_prev = (live_p - spread) if (live_p - spread) > 0 else st["price"]
                 open_p = safe_float(row.get("open"), live_p)
                 high_p = safe_float(row.get("max"), live_p)
                 low_p = safe_float(row.get("min"), live_p)
                 vol_lots = max(1, round(safe_int(row.get("Trading_Volume")) / 1000))
-                pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else st["pct"]
+                pct = round(((live_p - ref_prev) / ref_prev) * 100, 2) if ref_prev > 0 else st["pct"]
 
                 st["price"] = round(live_p, 2)
                 st["pct"] = pct
@@ -157,16 +156,14 @@ def fetch_all_1867_current_prices(stocks_map, now_tw):
                 return None
             meta = res_list[0].get("meta", {})
             live_p = safe_float(meta.get("regularMarketPrice"))
-            prev_c = safe_float(meta.get("chartPreviousClose"), st["price"])
             if live_p <= 0:
                 return None
-            if prev_c > 0 and not (prev_c * 0.895 <= live_p <= prev_c * 1.105):
-                return None
+            prev_c = safe_float(meta.get("chartPreviousClose"), safe_float(meta.get("previousClose"), live_p))
             open_p = safe_float(meta.get("regularMarketOpen"), live_p)
             high_p = safe_float(meta.get("regularMarketDayHigh"), live_p)
             low_p = safe_float(meta.get("regularMarketDayLow"), live_p)
             vol_lots = max(1, round(safe_int(meta.get("regularMarketVolume")) / 1000))
-            pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else st["pct"]
+            pct = round(((live_p - prev_c) / prev_c) * 100, 2) if prev_c > 0 else 0.0
             return code, live_p, pct, open_p, high_p, low_p, vol_lots
         except Exception:
             return None
@@ -237,12 +234,7 @@ def backfill_all_market_50d_by_date(stocks_map, now_tw):
             h = safe_float(row.get("max"), max(o, c))
             l = safe_float(row.get("min"), min(o, c))
             v = max(1, round(safe_int(row.get("Trading_Volume")) / 1000))
-            bars_list = per_stock_bars[code]
-            if bars_list:
-                prev_c = bars_list[-1]["c"]
-                if prev_c > 0 and not (prev_c * 0.85 <= c <= prev_c * 1.15):
-                    bars_list.clear()
-            bars_list.append({
+            per_stock_bars[code].append({
                 "d": mmdd,
                 "o": round(o, 2),
                 "h": round(max(h, o, c), 2),
@@ -273,7 +265,7 @@ def main():
     prev_map = load_previous_data()
     stocks_map = {}
 
-    # 1. 取得上市 (TWSE) 全市場掛牌名單與基本估值（作為名單與昨收基準）
+    # 1. 取得上市 (TWSE) 全市場掛牌名單與基本估值
     twse_day = fetch_json(TWSE_DAY_ALL_URL) or []
     twse_val = fetch_json(TWSE_BWIBBU_URL) or []
     val_map_twse = {str(item.get("Code", "")).strip(): item for item in twse_val}
@@ -404,7 +396,7 @@ def main():
                 "_todayBar": (old_st.get("klines50d") or [{"d": today_mmdd, "o": old_st["price"], "h": old_st["price"], "l": old_st["price"], "c": old_st["price"], "v": 100}])[-1]
             }
 
-    # 3. 無論盤中或盤後，一律以「當下的最新即時成交價」覆寫全市場 1,867 檔股價與今日 K 棒
+    # 3. 無條件以「當下即時成交價」覆寫全市場 1,867 檔股價與今日 K 棒
     live_updated_total = 0
     if len(stocks_map) > 500:
         live_updated_total = fetch_all_1867_current_prices(stocks_map, now_tw)
@@ -444,7 +436,7 @@ def main():
 
     if len(final_list) > 500:
         time_hhmm = now_tw.strftime("%H:%M")
-        mode_tag = f"當下即時股價 {time_hhmm}" if intraday_mode else f"當下最新股價 {time_hhmm}"
+        mode_tag = f"當下即時股價 {time_hhmm}"
         payload = {
             "updated_at": now_tw.strftime("%Y/%m/%d %H:%M"),
             "trading_date": f"{today_label} ({mode_tag})",
