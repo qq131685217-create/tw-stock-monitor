@@ -3,6 +3,7 @@ import os
 import time
 import asyncio
 import httpx
+import requests
 from datetime import datetime, timezone, timedelta
 
 TW_TZ = timezone(timedelta(hours=8))
@@ -75,10 +76,9 @@ async def fetch_all_1867_current_prices_async(stocks_map, now_tw):
     today_str = now_tw.strftime("%Y-%m-%d")
     today_mmdd = now_tw.strftime("%m/%d")
     v8_updated = 0
-    semaphore = asyncio.Semaphore(15) # 嚴格控制同時最高 15 個並發，避免觸發 Yahoo 封鎖限流
+    semaphore = asyncio.Semaphore(15)
 
     async with httpx.AsyncClient(limits=httpx.Limits(max_keepalive_connections=50, max_connections=100)) as client:
-        # 1. 優先透過 FinMind 批次取得當日快照
         try:
             r = await client.get(FINMIND_DATA_URL, params={"dataset": "TaiwanStockPrice", "date": today_str}, headers=HEADERS, timeout=6.0)
             if r.status_code == 200:
@@ -104,7 +104,6 @@ async def fetch_all_1867_current_prices_async(stocks_map, now_tw):
         except Exception:
             pass
 
-        # 2. 針對未更新標的以安全號誌限速非同步補齊
         tasks = [
             fetch_single_chart_async(client, semaphore, code, st["market"], today_mmdd)
             for code, st in stocks_map.items() if not st.get("_liveUpdated")
