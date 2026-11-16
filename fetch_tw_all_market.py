@@ -140,14 +140,40 @@ def main():
                 if len(code) != 4 or not code.isdigit() or code.startswith("00"): continue
                 ref_close = safe_float(row.get("ClosingPrice"))
                 if ref_close <= 0: continue
-                stocks_map[code] = {
-                    "code": code, "name": name, "market": "TWSE",
-                    "sector": prev_map.get(code, {}).get("sector", "上市企業"),
-                    "price": ref_close, "pct": 0.0, "pe": 20.0, "yield": 3.0,
-                    "roe": 14.0, "revYoy": 10.0, "inst1d": 0, "inst5d": 0,
-                    "detail": "外資0 / 投信0 / 自營0",
-                    "_todayBar": {"d": today_mmdd, "o": ref_close, "h": ref_close, "l": ref_close, "c": ref_close, "v": 1000}
-                }
+                close = safe_float(row.get("ClosingPrice"))
+if close <= 0:
+    continue
+
+        open_price = safe_float(row.get("OpeningPrice"), close)
+        high_price = safe_float(row.get("HighestPrice"), close)
+        low_price = safe_float(row.get("LowestPrice"), close)
+        volume_lots = safe_int(row.get("TradeVolume")) // 1000
+
+        old = prev_map.get(code, {})
+
+        stocks_map[code] = {
+            "code": code,
+            "name": name,
+            "market": "TWSE",
+            "sector": old.get("sector", "上市企業"),
+            "price": close,
+            "pct": old.get("pct", 0.0),
+            "pe": old.get("pe"),
+            "yield": old.get("yield"),
+            "roe": old.get("roe"),
+            "revYoy": old.get("revYoy"),
+            "inst1d": old.get("inst1d"),
+            "inst5d": old.get("inst5d"),
+            "detail": old.get("detail", ""),
+            "_todayBar": {
+                "d": today_mmdd,
+                "o": open_price,
+                "h": max(high_price, close),
+                "l": min(low_price, close),
+                "c": close,
+                "v": volume_lots,
+            },
+        }
     except Exception:
         pass
 
