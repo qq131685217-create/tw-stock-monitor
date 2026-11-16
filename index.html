@@ -92,7 +92,7 @@
                             <span id="calendarStatusText" class="whitespace-nowrap">盤中即時報價與雲端同步中（2026/11/16）｜ 法人籌碼維持 11/13 盤後</span>
                         </span>
                         <span id="storageStatusBadge" class="hidden xl:inline-block text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">
-                            資料來源：✓ 支援 GitHub tw_market_data.json ＋ K線同源即時追蹤
+                            資料來源：✓ 支援 GitHub tw_market_data.json ＋ K線同源即時追蹤（含 ±10% 漲跌幅防呆校準）
                         </span>
                     </div>
                 </div>
@@ -136,7 +136,7 @@
                     <span id="liveSyncProgressText" class="whitespace-nowrap">正在連線臺灣證券交易所 (TWSE) 與櫃買中心 (TPEx) OpenAPI...</span>
                 </div>
                 <span id="liveSyncProxyTag" class="px-2 py-0.5 rounded bg-white text-blue-700 border border-blue-200 font-mono text-[11px] whitespace-nowrap shrink-0">
-                    通道：FinMind ＋ 官方 OpenAPI 同步
+                    通道：MIS ＋ Yahoo regularMarketPrice ±10% 防呆校準
                 </span>
             </div>
         </div>
@@ -558,7 +558,7 @@
                     </span>
                 </div>
                 <div class="mt-1 flex items-center gap-3 text-xs">
-                    <span class="text-slate-500">最新收盤：<strong id="drawerPrice" class="text-base font-extrabold text-slate-900">2,350</strong> 元</span>
+                    <span class="text-slate-500">最新參考價：<strong id="drawerPrice" class="text-base font-extrabold text-slate-900">2,350</strong> 元</span>
                     <span id="drawerPct" class="font-extrabold text-rose-600">+0.43%</span>
                     <span class="text-slate-400">|</span>
                     <span class="text-slate-600">量化總分：<strong id="drawerScore" class="text-blue-700 font-extrabold">91.2</strong> 分</span>
@@ -834,8 +834,8 @@
         // =========================================================================
         // 1. 全域狀態與常數設定
         // =========================================================================
-        const STORAGE_KEY = "TW_QUANT_MONITOR_1867_REAL_V16";
-        const DATA_VERSION = "2026-11-16-quant2-v16";
+        const STORAGE_KEY = "TW_QUANT_MONITOR_1867_REAL_V17";
+        const DATA_VERSION = "2026-11-16-quant2-v17";
         const LAST_TRADING_DATE_LABEL = "2026/11/13 (五) 最後交易日盤後";
         const PAGE_SIZE = 25;
 
@@ -903,6 +903,15 @@
             }
         ];
 
+        // 嚴格驗證連網報價是否落在台股單日 ±10.5% 合理漲跌幅區間內，杜絕除權息或錯誤代碼污染股價
+        function isPlausibleTwStockPrice(basePrice, candidatePrice) {
+            const base = Number(basePrice);
+            const cand = Number(candidatePrice);
+            if (!Number.isFinite(cand) || cand <= 0) return false;
+            if (!Number.isFinite(base) || base <= 0) return true;
+            return cand >= base * 0.895 && cand <= base * 1.105;
+        }
+
         // =========================================================================
         // 2. 全市場 1,867 家資料庫建置（精準對齊 2026/11/13 最後交易日三大法人買賣超前十大）
         // =========================================================================
@@ -968,6 +977,7 @@
             const usedCodes = new Set(curatedCore.map(s => s.code));
             const universe = curatedCore.map(item => ({
                 ...item,
+                baseClose: item.price,
                 klines50d: []
             }));
 
@@ -1011,7 +1021,6 @@
                 const roe = Number((4 + nextRand() * 21).toFixed(1));
                 const revYoy = Number(((nextRand() - 0.34) * 42).toFixed(1));
 
-                // 限制一般中小型股單日法人張數在 ±380 張內，確保上市與上櫃三大法人買賣超前十大榜單 100% 純淨反映真實排行
                 const inst1d = Math.round((nextRand() - 0.48) * 740);
                 const inst5d = Math.round(inst1d * (1.8 + nextRand() * 1.4));
                 const fLots = Math.round(inst1d * 0.72);
@@ -1024,6 +1033,7 @@
                     market,
                     sector,
                     price,
+                    baseClose: price,
                     pct,
                     pe,
                     yield: yld,
@@ -1069,7 +1079,7 @@
 
                 if (cleaned.length > 0) {
                     const prevC = cleaned[cleaned.length - 1].c;
-                    if (c > prevC * 1.35 || c < prevC * 0.65) {
+                    if (c > prevC * 1.15 || c < prevC * 0.85) {
                         continue;
                     }
                 }
@@ -1143,7 +1153,8 @@
                 const start = Math.max(0, i - 19);
                 const slice = closes.slice(start, i + 1);
                 const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-                const variance = slice.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / slice.length;
+                const denom = slice.length > 1 ? slice.length - 1 : 1;
+                const variance = slice.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / denom;
                 const std = Math.sqrt(variance);
                 bollUpperSeries.push(mean + 2 * std);
                 bollLowerSeries.push(Math.max(0.1, mean - 2 * std));
@@ -1228,7 +1239,7 @@
             const kdTag = kdGolden ? "黃金交叉向上" : "死亡交叉向下";
             const bollTag = lastC >= (bollUpper + bollLower) / 2 ? "布林中上軌偏多" : "布林中下軌整理";
 
-            const summaryText = `技術結構解析：最新收盤 ${lastC.toLocaleString()} 元，${maTag}（MA5 ${ma5.toFixed(1)} / MA20 ${ma20.toFixed(1)}），RSI(14) 為 ${rsi14.toFixed(1)}，KD(9,3,3) 呈現${kdTag}（K ${k9.toFixed(1)} / D ${d9.toFixed(1)}），近期技術支撐 ${support.toFixed(1)} 元、壓力 ${resistance.toFixed(1)} 元。`;
+            const summaryText = `技術結構解析：最新參考價 ${lastC.toLocaleString()} 元，${maTag}（MA5 ${ma5.toFixed(1)} / MA20 ${ma20.toFixed(1)}），RSI(14) 為 ${rsi14.toFixed(1)}，KD(9,3,3) 呈現${kdTag}（K ${k9.toFixed(1)} / D ${d9.toFixed(1)}），近期技術支撐 ${support.toFixed(1)} 元、壓力 ${resistance.toFixed(1)} 元。`;
 
             return {
                 hasRealBars: true,
@@ -1278,17 +1289,14 @@
             const wi = w.wInst / sumW;
             const wt = w.wTech / sumW;
 
-            // 1. 基本面成長分
             let sFund = 52 + st.roe * 1.15 + st.revYoy * 0.55;
             sFund = Math.max(25, Math.min(98, sFund));
 
-            // 2. 估值與殖利率分
             let peScore = st.pe <= 0 ? 45 : st.pe <= 14 ? 90 : st.pe <= 20 ? 84 : st.pe <= 26 ? 76 : Math.max(35, 88 - st.pe * 1.1);
             let yldScore = Math.min(96, 48 + st.yield * 8.5);
             let sVal = peScore * 0.52 + yldScore * 0.48;
             sVal = Math.max(25, Math.min(98, sVal));
 
-            // 3. 籌碼面 2.0：上市／上櫃分級門檻 ＋ 投信認養／土洋共振加權
             const isTpex = st.market === "TPEx";
             const instTierTop = isTpex ? 2200 : 10000;
             const instTierHigh = isTpex ? 1200 : 4000;
@@ -1320,16 +1328,15 @@
             if (st.inst5d > (isTpex ? 2500 : 6000)) sInst += 2.5;
             sInst = Math.max(20, Math.min(98, sInst));
 
-            // 4. 技術面 2.0：黃金起漲區間 (+1.5% ~ +5.5%) 加分 ＋ 單日暴漲 (>8.5%) 追高風險懲罰
             const tech = computeTechnicalIndicators(st.klines50d, st.price, st.pct);
             let sTech = 62;
             let chaseWarning = false;
             if (st.pct >= 1.5 && st.pct <= 5.5) {
-                sTech += 16 + (st.pct - 1.5) * 1.2; // 黃金健康起漲帶
+                sTech += 16 + (st.pct - 1.5) * 1.2;
             } else if (st.pct > 5.5 && st.pct <= 8.5) {
                 sTech += 14 - (st.pct - 5.5) * 1.5;
             } else if (st.pct > 8.5) {
-                sTech += 5; // 漲停或暴衝乖離過大，不給追高滿分
+                sTech += 5;
                 chaseWarning = true;
             } else if (st.pct >= 0) {
                 sTech += st.pct * 5.0;
@@ -1352,7 +1359,6 @@
 
             let rawScore = sFund * wf + sVal * wv + sInst * wi + sTech * wt;
 
-            // 防雷一票否決制（同步區分上市／上櫃賣超門檻）
             const vetoReasons = [];
             const vetoSellLimit = isTpex ? -1200 : -4000;
             if (st.inst1d <= vetoSellLimit) {
@@ -1386,14 +1392,13 @@
                 qualCategory = "avoid";
             }
 
-            // 5. 依產業波動度動態調整停利／停損（風報比鎖定 1 : 2 以上）
             const p = st.price;
             const lowVolSectors = ["金融保險業", "航運業", "水泥工業", "食品工業", "造紙工業", "居家生活"];
             const isLowVol = lowVolSectors.includes(st.sector);
-            const slRatio = isLowVol ? 0.965 : 0.935; // 低波動 -3.5% / 高波動成長股 -6.5%
+            const slRatio = isLowVol ? 0.965 : 0.935;
             const tpRatio = isLowVol
-                ? (totalScore >= 88.5 ? 1.085 : 1.075)   // 低波動停利 +7.5% ~ +8.5%（風報比 > 2.1）
-                : (totalScore >= 88.5 ? 1.150 : 1.135);  // 高波動停利 +13.5% ~ +15.0%（風報比 > 2.0）
+                ? (totalScore >= 88.5 ? 1.085 : 1.075)
+                : (totalScore >= 88.5 ? 1.150 : 1.135);
 
             const buyLow = Number((tech.hasRealBars ? Math.max(tech.support, p * (isLowVol ? 0.988 : 0.978)) : p * (isLowVol ? 0.99 : 0.982)).toFixed(p >= 100 ? 0 : 2));
             const buyHigh = Number((p * (chaseWarning ? 0.995 : 1.003)).toFixed(p >= 100 ? 0 : 2));
@@ -1978,7 +1983,7 @@
         }
 
         // =========================================================================
-        // 7. 盤中即時報價與 GitHub 雲端 JSON 同步引擎（三大法人買賣超維持不動）
+        // 7. 盤中即時報價與 GitHub 雲端 JSON 同步引擎（含 ±10% 漲跌幅防呆，三大法人買賣超維持不動）
         // =========================================================================
         let autoIntradayEnabled = true;
         let autoIntradayTimer = null;
@@ -2016,13 +2021,17 @@
                     const code = String(remote.code || "").trim();
                     if (!code) return;
                     let local = stockMap.get(code);
+                    const remotePrice = Number(remote.price);
+                    if (!Number.isFinite(remotePrice) || remotePrice <= 0) return;
+
                     if (!local) {
                         local = {
                             code,
                             name: remote.name || code,
                             market: remote.market || "TWSE",
                             sector: remote.sector || "上市櫃企業",
-                            price: Number(remote.price) || 0,
+                            price: remotePrice,
+                            baseClose: remotePrice,
                             pct: Number(remote.pct) || 0,
                             pe: Number(remote.pe) || 18.0,
                             yield: Number(remote.yield) || 2.5,
@@ -2037,26 +2046,31 @@
                         stockMap.set(code, local);
                     }
 
-                    // 同步真實 K 線，並以最後一根真實 K 棒價格驅動全站股價
+                    // 同步真實 K 線（僅採信與前收在 ±15% 內的真實序列）
                     if (Array.isArray(remote.klines50d) && remote.klines50d.length > 0) {
-                        local.klines50d = remote.klines50d.slice(-50);
-                        sanitizeRealKlineSeries(local);
+                        const lastRemoteBar = remote.klines50d[remote.klines50d.length - 1];
+                        if (lastRemoteBar && isPlausibleTwStockPrice(local.baseClose, lastRemoteBar.c)) {
+                            local.klines50d = remote.klines50d.slice(-50);
+                            sanitizeRealKlineSeries(local);
+                        }
                     }
 
                     if (Array.isArray(local.klines50d) && local.klines50d.length > 0) {
                         const lastBar = local.klines50d[local.klines50d.length - 1];
                         const prevBar = local.klines50d.length >= 2 ? local.klines50d[local.klines50d.length - 2] : null;
-                        if (lastBar && lastBar.c > 0) {
+                        if (lastBar && isPlausibleTwStockPrice(local.baseClose, lastBar.c)) {
                             local.price = lastBar.c;
                             if (prevBar && prevBar.c > 0) {
                                 local.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
-                            } else if (Number.isFinite(Number(remote.pct))) {
+                            } else if (Number.isFinite(Number(remote.pct)) && Math.abs(Number(remote.pct)) <= 10.5) {
                                 local.pct = Number(remote.pct);
                             }
                         }
-                    } else if (Number(remote.price) > 0) {
-                        local.price = Number(remote.price);
-                        if (Number.isFinite(Number(remote.pct))) local.pct = Number(remote.pct);
+                    } else if (isPlausibleTwStockPrice(local.baseClose, remotePrice)) {
+                        local.price = remotePrice;
+                        if (Number.isFinite(Number(remote.pct)) && Math.abs(Number(remote.pct)) <= 10.5) {
+                            local.pct = Number(remote.pct);
+                        }
                     }
 
                     if (Number(remote.pe) > 0) local.pe = Number(remote.pe);
@@ -2082,14 +2096,10 @@
 
         function getPriorityCodesForLiveQuotes() {
             const codeSet = new Set();
-            // 1. 新聞推薦標的
             KEY_FINANCIAL_NEWS.forEach(n => n.picks.forEach(c => codeSet.add(c)));
-            // 2. TOP 4 與高分前 20 名標的
             evaluatedStocks.slice(0, 20).forEach(s => codeSet.add(s.code));
-            // 3. 目前明細表頁面正在檢視的 25 檔標的
             const startIdx = (currentPage - 1) * PAGE_SIZE;
             filteredStocks.slice(startIdx, startIdx + PAGE_SIZE).forEach(s => codeSet.add(s.code));
-            // 4. 目前右側抽屜開啟中的標的
             if (activeDrawerCode) codeSet.add(activeDrawerCode);
             return Array.from(codeSet).slice(0, 55);
         }
@@ -2110,25 +2120,22 @@
             if (json && Array.isArray(json.msgArray)) {
                 json.msgArray.forEach(item => {
                     const code = String(item.c || "").trim();
+                    const st = stockMap.get(code);
+                    if (!st) return;
+
                     const prevClose = parseFloat(item.y);
-                    // 盤中優先取最新成交價 z，若尚未撮合或揭示則取最佳買/賣中間價或昨收
-                    let livePrice = parseFloat(item.z);
-                    if (!Number.isFinite(livePrice) || livePrice <= 0) {
-                        const bFirst = parseFloat(String(item.b || "").split("_")[0]);
-                        const aFirst = parseFloat(String(item.a || "").split("_")[0]);
-                        if (Number.isFinite(bFirst) && bFirst > 0 && Number.isFinite(aFirst) && aFirst > 0) {
-                            livePrice = Number(((bFirst + aFirst) / 2).toFixed(2));
-                        } else if (Number.isFinite(bFirst) && bFirst > 0) {
-                            livePrice = bFirst;
-                        } else if (Number.isFinite(aFirst) && aFirst > 0) {
-                            livePrice = aFirst;
+                    // 僅採信已實際撮合的即時成交價 z（絕不用未成交掛單價亂蓋）
+                    const livePrice = parseFloat(item.z);
+                    if (Number.isFinite(livePrice) && livePrice > 0 && isPlausibleTwStockPrice(st.baseClose, livePrice)) {
+                        const refPrev = (Number.isFinite(prevClose) && prevClose > 0 && isPlausibleTwStockPrice(st.baseClose, prevClose))
+                            ? prevClose
+                            : st.baseClose;
+                        const pct = refPrev > 0
+                            ? Number((((livePrice - refPrev) / refPrev) * 100).toFixed(2))
+                            : st.pct;
+                        if (Math.abs(pct) <= 10.5) {
+                            resultMap.set(code, { price: livePrice, pct, time: item.t || "" });
                         }
-                    }
-                    if (code && Number.isFinite(livePrice) && livePrice > 0) {
-                        const pct = (Number.isFinite(prevClose) && prevClose > 0)
-                            ? Number((((livePrice - prevClose) / prevClose) * 100).toFixed(2))
-                            : null;
-                        resultMap.set(code, { price: livePrice, pct, time: item.t || "" });
                     }
                 });
             }
@@ -2142,11 +2149,16 @@
             const meta = json?.chart?.result?.[0]?.meta;
             const livePrice = Number(meta?.regularMarketPrice);
             const prevClose = Number(meta?.chartPreviousClose || meta?.previousClose);
-            if (Number.isFinite(livePrice) && livePrice > 0) {
-                const pct = (Number.isFinite(prevClose) && prevClose > 0)
-                    ? Number((((livePrice - prevClose) / prevClose) * 100).toFixed(2))
+            if (Number.isFinite(livePrice) && livePrice > 0 && isPlausibleTwStockPrice(st.baseClose, livePrice)) {
+                const refPrev = (Number.isFinite(prevClose) && prevClose > 0 && isPlausibleTwStockPrice(st.baseClose, prevClose))
+                    ? prevClose
+                    : st.baseClose;
+                const pct = refPrev > 0
+                    ? Number((((livePrice - refPrev) / refPrev) * 100).toFixed(2))
                     : st.pct;
-                return { price: Number(livePrice.toFixed(2)), pct };
+                if (Math.abs(pct) <= 10.5) {
+                    return { price: Number(livePrice.toFixed(2)), pct };
+                }
             }
             return null;
         }
@@ -2171,15 +2183,13 @@
                 const stockMap = new Map(allStocksRaw.map(s => [s.code, s]));
                 let updatedPriceCount = 0;
 
-                // 1. 優先透過證交所 MIS 盤中即時行情批次抓取
+                // 1. 優先透過證交所 MIS 盤中即時行情批次抓取（嚴格 ±10% 防呆校準）
                 const misQuotes = await fetchMisTwseBatchQuotes(targetCodes);
                 misQuotes.forEach((q, code) => {
                     const st = stockMap.get(code);
-                    if (st) {
-                        if (!st.baseClose) st.baseClose = st.price;
+                    if (st && isPlausibleTwStockPrice(st.baseClose, q.price)) {
                         st.price = q.price;
                         if (q.pct !== null) st.pct = q.pct;
-                        // 同步更新今日最新一根 K 棒收盤/高低價，確保全站與 K 線 100% 一致
                         if (Array.isArray(st.klines50d) && st.klines50d.length > 0) {
                             const lastBar = st.klines50d[st.klines50d.length - 1];
                             lastBar.c = q.price;
@@ -2190,23 +2200,24 @@
                     }
                 });
 
-                // 2. 若 MIS 受阻，對核心焦點與當前抽屜標的嘗試 Yahoo 盤中報價備援
+                // 2. 若 MIS 受阻，對核心焦點與當前抽屜標的嘗試 Yahoo 盤中 regularMarketPrice 備援
                 if (updatedPriceCount === 0) {
                     const fallbackTargets = targetCodes.slice(0, 12).map(c => stockMap.get(c)).filter(Boolean);
                     const yfResults = await Promise.all(fallbackTargets.map(st => fetchYahooSingleLiveQuote(st)));
                     yfResults.forEach((q, idx) => {
                         if (q) {
                             const st = fallbackTargets[idx];
-                            if (!st.baseClose) st.baseClose = st.price;
-                            st.price = q.price;
-                            st.pct = q.pct;
-                            if (Array.isArray(st.klines50d) && st.klines50d.length > 0) {
-                                const lastBar = st.klines50d[st.klines50d.length - 1];
-                                lastBar.c = q.price;
-                                lastBar.h = Math.max(lastBar.h, q.price);
-                                lastBar.l = Math.min(lastBar.l, q.price);
+                            if (isPlausibleTwStockPrice(st.baseClose, q.price)) {
+                                st.price = q.price;
+                                st.pct = q.pct;
+                                if (Array.isArray(st.klines50d) && st.klines50d.length > 0) {
+                                    const lastBar = st.klines50d[st.klines50d.length - 1];
+                                    lastBar.c = q.price;
+                                    lastBar.h = Math.max(lastBar.h, q.price);
+                                    lastBar.l = Math.min(lastBar.l, q.price);
+                                }
+                                updatedPriceCount++;
                             }
-                            updatedPriceCount++;
                         }
                     });
                 }
@@ -2263,7 +2274,7 @@
             icon.classList.add("animate-spin-fast");
             label.textContent = "即時抓價中...";
             bar.classList.remove("hidden");
-            barText.textContent = "正在連線臺灣證券交易所 (MIS) 與 Yahoo Finance 抓取盤中即時成交價（三大法人買賣超維持不動）...";
+            barText.textContent = "正在連線臺灣證券交易所 (MIS) 與 Yahoo Finance 抓取盤中即時成交價（含 ±10% 防呆校準，三大法人買賣超維持不動）...";
 
             try {
                 const liveHits = await syncRealtimePricesOnly(true);
@@ -2276,7 +2287,7 @@
                     lastSyncLabel = `盤中監測 (${hhmmss})`;
                     lastSyncSource = "✓ 已鎖定基準收盤價（預覽沙盒受限・法人買賣超維持原貌）";
                     recomputeAndRenderAll();
-                    showToast("已執行即時報價同步檢查（若處於預覽沙盒環境受限，下載至本機開啟即可每秒直連證交所盤中報價；三大法人買賣超維持不動）", "ℹ️");
+                    showToast("已執行即時報價同步檢查（若處於預覽沙盒環境受限，部署至 GitHub Pages 後每 5 分鐘自動更新；三大法人買賣超維持不動）", "ℹ️");
                 }
             } finally {
                 btn.disabled = false;
@@ -2291,15 +2302,16 @@
             const code = rawStock.code;
             const startDt = new Date(Date.now() - 105 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
-            // 第一順位：Yahoo Finance 技術分析圖表介面（query1 / query2 雙節點，台灣時區 UTC+8）
+            // 第一順位：Yahoo Finance 技術分析圖表介面（含盤中 meta.regularMarketPrice 即時成交價與最後一根 K 棒合併校準）
             const suffix = rawStock.market === "TPEx" ? ".TWO" : ".TW";
             const yfUrls = [
-                `https://query1.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=3mo&interval=1d`,
-                `https://query2.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=3mo&interval=1d`
+                `https://query1.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=3mo&interval=1d&_=${Date.now()}`,
+                `https://query2.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=3mo&interval=1d&_=${Date.now()}`
             ];
             for (const yfUrl of yfUrls) {
                 const yfJson = await fetchWithCorsFallback(yfUrl);
                 const result = yfJson?.chart?.result?.[0];
+                const meta = result?.meta;
                 const ts = result?.timestamp;
                 const quote = result?.indicators?.quote?.[0];
                 if (Array.isArray(ts) && ts.length >= 5 && quote) {
@@ -2323,15 +2335,22 @@
                         });
                     }
                     if (parsed.length >= 5) {
+                        const liveRegPrice = Number(meta?.regularMarketPrice);
+                        if (Number.isFinite(liveRegPrice) && liveRegPrice > 0 && isPlausibleTwStockPrice(rawStock.baseClose, liveRegPrice)) {
+                            const lastBar = parsed[parsed.length - 1];
+                            lastBar.c = Number(liveRegPrice.toFixed(2));
+                            lastBar.h = Math.max(lastBar.h, lastBar.c);
+                            lastBar.l = Math.min(lastBar.l, lastBar.c);
+                        }
                         const lastClose = parsed[parsed.length - 1].c;
-                        if (lastClose >= rawStock.price * 0.65 && lastClose <= rawStock.price * 1.35) {
+                        if (isPlausibleTwStockPrice(rawStock.baseClose, lastClose)) {
                             return { bars: parsed.slice(-50), source: "Yahoo Finance 技術分析真實日線" };
                         }
                     }
                 }
             }
 
-            // 第二順位：FinMind 台灣股市開放資料庫（原生開放跨網域）
+            // 第二順位：FinMind 台灣股市開放資料庫（嚴格檢查最後收盤是否與基準價在 ±10.5% 內，排除未還原除權息錯位）
             try {
                 const fmUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${code}&start_date=${startDt}`;
                 const resp = await fetch(fmUrl);
@@ -2349,7 +2368,10 @@
                                 v: Math.max(1, Math.round((Number(r.Trading_Volume) || 100000) / 1000))
                             }));
                         if (parsed.length >= 5) {
-                            return { bars: parsed.slice(-50), source: "FinMind 台股開放資料庫真實日線" };
+                            const lastClose = parsed[parsed.length - 1].c;
+                            if (isPlausibleTwStockPrice(rawStock.baseClose, lastClose)) {
+                                return { bars: parsed.slice(-50), source: "FinMind 台股開放資料庫真實日線" };
+                            }
                         }
                     }
                 }
@@ -2390,7 +2412,10 @@
                     }
                 }
                 if (combined.length >= 5) {
-                    return { bars: combined.slice(-50), source: "臺灣證券交易所 STOCK_DAY 真實日線" };
+                    const lastClose = combined[combined.length - 1].c;
+                    if (isPlausibleTwStockPrice(rawStock.baseClose, lastClose)) {
+                        return { bars: combined.slice(-50), source: "臺灣證券交易所 STOCK_DAY 真實日線" };
+                    }
                 }
             }
 
@@ -2491,9 +2516,11 @@
                 if (rawSt.klines50d.length > 0) {
                     const lastBar = rawSt.klines50d[rawSt.klines50d.length - 1];
                     const prevBar = rawSt.klines50d.length >= 2 ? rawSt.klines50d[rawSt.klines50d.length - 2] : null;
-                    rawSt.price = lastBar.c;
-                    if (prevBar && prevBar.c > 0) {
-                        rawSt.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
+                    if (isPlausibleTwStockPrice(rawSt.baseClose, lastBar.c)) {
+                        rawSt.price = lastBar.c;
+                        if (prevBar && prevBar.c > 0) {
+                            rawSt.pct = Number((((lastBar.c - prevBar.c) / prevBar.c) * 100).toFixed(2));
+                        }
                     }
                 }
                 saveDatabaseToLocalStorage();
@@ -2611,7 +2638,6 @@
             const cColor = isUp ? "text-rose-600" : "text-emerald-600";
             const rsiVal = tech.rsiSeries?.[i] ?? tech.rsi14;
             const kVal = tech.kSeries?.[i] ?? tech.k9;
-            const dVal = tech.dSeries?.[i] ?? tech.d9;
 
             barEl.innerHTML = `
                 <div><span class="text-slate-400">日期</span> <strong class="text-slate-900">${b.d}</strong></div>
@@ -2685,7 +2711,6 @@
 
             const yOfPrice = p => padTop + ((maxP - p) / (maxP - minP)) * mainH;
 
-            // 背景網格線
             ctx.strokeStyle = "#f1f5f9";
             ctx.lineWidth = 1;
             ctx.font = "10px Inter, sans-serif";
@@ -2701,7 +2726,6 @@
                 ctx.fillText(pVal >= 100 ? pVal.toFixed(0) : pVal.toFixed(1), width - padRight + 6, y + 3);
             }
 
-            // 支撐 / 壓力與停利停損水平線
             if (drawerShowSrLines) {
                 const drawDashedLevel = (price, color) => {
                     const y = yOfPrice(price);
@@ -2726,7 +2750,6 @@
             const candleW = Math.max(3, Math.min(11, stepX * 0.62));
             const xOfIdx = i => padLeft + stepX * (i + 0.5);
 
-            // 布林通道 BB(20)
             if (drawerShowBoll && tech.bollUpperSeries.length === n) {
                 ctx.save();
                 ctx.strokeStyle = "rgba(99, 102, 241, 0.55)";
@@ -2744,7 +2767,6 @@
                 ctx.restore();
             }
 
-            // 繪製台股紅漲綠跌 K 棒
             bars.forEach((b, i) => {
                 const x = xOfIdx(i);
                 const isUp = b.c >= b.o;
@@ -2765,7 +2787,6 @@
                 ctx.fillRect(x - candleW / 2, bodyTop, candleW, bodyH);
             });
 
-            // 繪製 MA5 與 MA20 均線
             const drawMaLine = (period, color) => {
                 ctx.save();
                 ctx.strokeStyle = color;
@@ -2786,7 +2807,6 @@
             drawMaLine(5, "#f59e0b");
             drawMaLine(20, "#9333ea");
 
-            // 繪製下方副圖（VOL / RSI / KD）
             ctx.strokeStyle = "#e2e8f0";
             ctx.beginPath();
             ctx.moveTo(padLeft, subTop - 4);
@@ -2829,7 +2849,6 @@
                 drawSubSeries(tech.dSeries, "#2563eb");
             }
 
-            // X 軸日期刻度
             ctx.fillStyle = "#64748b";
             ctx.font = "10px Inter, sans-serif";
             const labelIndices = [0, Math.floor(n / 2), n - 1];
@@ -2840,7 +2859,6 @@
                 }
             });
 
-            // 十字準星高亮線
             if (drawerHoverIndex >= 0 && drawerHoverIndex < n) {
                 const hx = xOfIdx(drawerHoverIndex);
                 ctx.save();
